@@ -1,0 +1,4012 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>辺境の冠 — 基盤プロトタイプ</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #f0e5c9;
+      --muted: #a9a084;
+      --panel: #171c1b;
+      --panel-2: #222925;
+      --line: #4c5748;
+      --accent: #d3a74a;
+      --accent-2: #79925a;
+      --danger: #c76856;
+      --shadow: #080b0a;
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #0d1110;
+      color: var(--ink);
+      font-family: "Yu Gothic UI", "Meiryo", sans-serif;
+    }
+
+    button,
+    input { font: inherit; }
+
+    button {
+      color: var(--ink);
+      background: #283029;
+      border: 1px solid #596452;
+      border-radius: 3px;
+      min-height: 32px;
+      cursor: pointer;
+    }
+
+    button:hover { background: #354039; }
+    button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    button.active { color: #1a160c; background: var(--accent); border-color: #f0cd78; }
+    button.danger { border-color: #8e5147; }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    #app {
+      display: grid;
+      grid-template-rows: 48px minmax(0, 1fr) 70px;
+      width: 100%;
+      height: 100%;
+    }
+
+    #topbar {
+      display: grid;
+      grid-template-columns: minmax(190px, 1fr) auto minmax(260px, 1fr);
+      align-items: center;
+      gap: 12px;
+      padding: 6px 12px;
+      background: linear-gradient(#242b27, #171c1b);
+      border-bottom: 2px solid #59604d;
+      box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35);
+      z-index: 2;
+    }
+
+    .brand {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .brand strong {
+      color: #f1d58d;
+      letter-spacing: 0.12em;
+      white-space: nowrap;
+    }
+
+    .brand small,
+    .muted { color: var(--muted); }
+
+    .top-help {
+      min-height: 27px;
+      padding: 3px 9px;
+      color: #ead79e;
+      background: #303a31;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    #calendar {
+      min-width: 230px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+
+    #resources {
+      display: flex;
+      justify-content: flex-end;
+      gap: 14px;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .resource b { color: #f4d988; }
+
+    #workspace {
+      display: grid;
+      grid-template-columns: 218px minmax(0, 1fr) 238px;
+      min-height: 0;
+    }
+
+    .sidebar {
+      min-height: 0;
+      padding: 12px;
+      overflow: auto;
+      background: var(--panel);
+      border-color: #485246;
+      border-style: solid;
+    }
+
+    #leftbar { border-width: 0 1px 0 0; }
+    #rightbar { border-width: 0 0 0 1px; }
+
+    .panel-title {
+      margin: 0 0 9px;
+      color: #e8cc83;
+      font-size: 13px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .tool-list {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 18px;
+    }
+
+    .tool-button {
+      display: grid;
+      grid-template-columns: 28px 1fr auto;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 8px;
+      text-align: left;
+    }
+
+    .tool-icon {
+      display: grid;
+      place-items: center;
+      width: 22px;
+      height: 22px;
+      color: #17130b;
+      background: #b8984d;
+      border: 1px solid #e0c879;
+      font: 700 12px/1 monospace;
+    }
+
+    .tool-cost { color: #aeb79f; font-size: 11px; }
+
+    .facility-guide {
+      margin: 0 0 18px;
+      padding: 10px;
+      background: #111614;
+      border: 1px solid #3c463e;
+      box-shadow: inset 0 0 0 1px #0a0d0c;
+    }
+
+    .guide-heading {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 7px;
+    }
+
+    .guide-heading strong { color: #f0d58e; }
+
+    .guide-status {
+      margin-left: auto;
+      padding: 2px 5px;
+      color: #cde2ae;
+      background: #34442d;
+      border: 1px solid #607754;
+      font-size: 9px;
+    }
+
+    .guide-status.planned {
+      color: #eadbb0;
+      background: #4b4029;
+      border-color: #7d6941;
+    }
+
+    .facility-guide p {
+      margin: 5px 0 9px;
+      color: #d4cdb6;
+      font-size: 11px;
+      line-height: 1.55;
+    }
+
+    .guide-list {
+      display: grid;
+      grid-template-columns: 45px 1fr;
+      gap: 5px 7px;
+      margin: 0;
+      font-size: 10px;
+      line-height: 1.45;
+    }
+
+    .guide-list dt { color: #918b77; }
+    .guide-list dd { margin: 0; color: #c9c2aa; }
+
+    .help {
+      padding: 9px;
+      color: #c4bda7;
+      background: #111614;
+      border: 1px solid #303a33;
+      font-size: 12px;
+      line-height: 1.65;
+    }
+
+    #canvas-wrap {
+      position: relative;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      background: #0a0e0c;
+    }
+
+    #gameCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      cursor: crosshair;
+      touch-action: none;
+    }
+
+    #map-badge,
+    #toast,
+    #placement-hint {
+      position: absolute;
+      pointer-events: none;
+      background: rgba(13, 17, 15, 0.9);
+      border: 1px solid #596452;
+      box-shadow: 0 2px 8px #0008;
+    }
+
+    #map-badge {
+      left: 10px;
+      bottom: 10px;
+      padding: 6px 9px;
+      color: #c9c1a8;
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    #toast {
+      left: 50%;
+      top: 14px;
+      transform: translateX(-50%) translateY(-8px);
+      padding: 8px 14px;
+      opacity: 0;
+      transition: 140ms ease;
+    }
+
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #toast.error { color: #ffd4cb; border-color: var(--danger); }
+
+    #season-banner {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      z-index: 8;
+      width: min(430px, calc(100% - 34px));
+      transform: translate(-50%, -50%);
+      padding: 3px;
+      background: #151b19ee;
+      border: 2px solid #d5bd79;
+      box-shadow: 0 12px 40px #000d, inset 0 0 0 2px #3d3522;
+      text-align: center;
+    }
+
+    #season-banner[hidden] { display: none; }
+    #season-banner.winter { border-color: #dcecf0; box-shadow: 0 12px 40px #000d, inset 0 0 0 2px #60747a; }
+    #season-banner-inner { padding: 18px 18px 15px; border: 1px solid #5a604f; }
+    #season-banner-kicker { color: #c7b168; font: 700 10px/1.2 Consolas, monospace; letter-spacing: 0.2em; }
+    #season-banner.winter #season-banner-kicker { color: #b9dbe2; }
+    #season-banner-title { margin: 5px 0 6px; color: #f0d78f; font-size: 28px; letter-spacing: 0.12em; }
+    #season-banner.winter #season-banner-title { color: #e8f4f5; text-shadow: 0 0 12px #9bd3e288; }
+    #season-banner-text { margin: 0 0 12px; color: #d5cdb6; font-size: 13px; line-height: 1.65; }
+    #season-banner-close { min-width: 150px; color: #17150e; background: #d4b960; border-color: #f1d788; font-weight: 700; }
+    #season-banner.winter #season-banner-close { background: #c9e1e4; border-color: #ecf8f8; }
+
+    body[data-season='winter'] #topbar {
+      background: linear-gradient(#34464a, #1b2729);
+      border-bottom-color: #8ca9ae;
+    }
+
+    body[data-season='winter'] #calendar { color: #e6f3f4; text-shadow: 0 0 8px #a8d7df66; }
+
+    #placement-hint {
+      left: 50%;
+      bottom: 10px;
+      min-width: 260px;
+      max-width: min(520px, calc(100% - 180px));
+      transform: translateX(-50%);
+      padding: 7px 11px;
+      color: #d7d0b9;
+      font-size: 11px;
+      text-align: center;
+    }
+
+    #placement-hint.valid { color: #d7edbc; border-color: #70905d; }
+    #placement-hint.invalid { color: #ffd0c8; border-color: #a95f51; }
+
+    .tutorial-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      pointer-events: auto;
+      background: rgba(4, 7, 6, 0.32);
+    }
+
+    .tutorial-overlay[hidden] { display: none; }
+
+    .tutorial-card {
+      position: absolute;
+      right: 26px;
+      bottom: 92px;
+      width: min(430px, calc(100% - 32px));
+      pointer-events: auto;
+      background: #171d1a;
+      border: 2px solid #b4934d;
+      box-shadow: 0 10px 35px #000c, inset 0 0 0 2px #302918;
+    }
+
+    .tutorial-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 13px;
+      background: #292f28;
+      border-bottom: 1px solid #5c624f;
+    }
+
+    .tutorial-kicker {
+      color: #d1b260;
+      font: 700 10px/1.2 Consolas, monospace;
+      letter-spacing: 0.14em;
+    }
+
+    .tutorial-progress {
+      margin-left: auto;
+      color: #aaa28c;
+      font: 11px/1 Consolas, monospace;
+    }
+
+    .tutorial-body { padding: 15px 16px 13px; }
+    .tutorial-body h2 { margin: 0 0 8px; color: #f1d58b; font-size: 19px; }
+    .tutorial-body p { margin: 0 0 10px; color: #d5cdb5; font-size: 13px; line-height: 1.7; }
+    .tutorial-body ul { margin: 8px 0 10px; padding-left: 20px; color: #d5cdb5; font-size: 12px; line-height: 1.7; }
+    .tutorial-layout {
+      margin: 10px 0;
+      padding: 8px 12px;
+      overflow: hidden;
+      color: #f0d990;
+      background: #0d1210;
+      border: 1px solid #414a40;
+      font: 700 13px/1.65 Consolas, monospace;
+      white-space: pre;
+    }
+
+    .tutorial-note {
+      padding: 7px 9px;
+      color: #b9cba7;
+      background: #273126;
+      border-left: 3px solid #7d985e;
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    .tutorial-actions {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 10px 13px;
+      background: #101512;
+      border-top: 1px solid #384139;
+    }
+
+    .tutorial-actions .skip { margin-right: auto; color: #aaa38f; background: transparent; border-color: #3f4940; }
+    .tutorial-actions .next { min-width: 98px; color: #1b170d; background: var(--accent); border-color: #f0cd78; font-weight: 700; }
+    .tutorial-focus { outline: 3px solid #e0b957 !important; outline-offset: -3px; }
+
+    /* 読みやすさ優先の標準UIサイズ */
+    body { font-size: 15px; }
+    button { min-height: 38px; font-size: 14px; }
+    #app { grid-template-rows: 58px minmax(0, 1fr) 86px; }
+    #topbar { padding: 8px 16px; gap: 16px; }
+    .brand strong { font-size: 17px; }
+    .brand small { font-size: 12px; }
+    #calendar { min-width: 260px; font-size: 15px; }
+    #resources { gap: 17px; font-size: 14px; }
+    #workspace { grid-template-columns: 276px minmax(0, 1fr) 292px; }
+    .sidebar { padding: 16px; }
+    .panel-title { margin-bottom: 11px; font-size: 14px; }
+    .tool-list { gap: 8px; }
+    .tool-button { grid-template-columns: 34px 1fr auto; gap: 9px; min-height: 46px; padding: 7px 10px; font-size: 14px; }
+    .tool-icon { width: 28px; height: 28px; font-size: 14px; }
+    .tool-cost { font-size: 12px; }
+    .facility-guide { padding: 13px; }
+    .facility-guide p { font-size: 13px; line-height: 1.65; }
+    .guide-list { grid-template-columns: 56px 1fr; gap: 7px 9px; font-size: 12px; line-height: 1.55; }
+    .guide-status { padding: 3px 6px; font-size: 10px; }
+    .help { padding: 11px; font-size: 13px; line-height: 1.75; }
+    .stat-grid { gap: 8px 12px; font-size: 13px; }
+    .runtime-note { font-size: 12px; }
+    #placement-hint { bottom: 14px; min-width: 340px; padding: 10px 15px; font-size: 14px; }
+    #map-badge { padding: 8px 11px; font-size: 12px; }
+    #bottombar { padding: 10px 16px; }
+    #selection-name { font-size: 16px; }
+    #selection-desc, #status-line { font-size: 13px; }
+    .speed-button { min-width: 49px; }
+    .tutorial-card { width: min(500px, calc(100% - 32px)); }
+    .tutorial-body h2 { font-size: 22px; }
+    .tutorial-body p { font-size: 15px; }
+    .tutorial-body ul { font-size: 14px; }
+
+    #tool-flyout {
+      position: fixed;
+      z-index: 45;
+      width: min(410px, calc(100vw - 32px));
+      padding: 4px;
+      pointer-events: none;
+      background: #171d1af5;
+      border: 2px solid #d2ae55;
+      box-shadow: 0 14px 38px #000d, inset 0 0 0 2px #3b321d;
+      transform-origin: left center;
+      animation: flyout-in 120ms ease-out;
+    }
+
+    #tool-flyout[hidden] { display: none; }
+    #tool-flyout-inner { padding: 16px 18px; border: 1px solid #515a4c; }
+    .flyout-head { display: flex; align-items: center; gap: 11px; margin-bottom: 10px; }
+    #flyout-name { color: #f2d68b; font-size: 21px; }
+    #flyout-status { margin-left: auto; padding: 4px 7px; color: #d4e9b9; background: #34442d; border: 1px solid #607754; font-size: 11px; }
+    #flyout-status.planned { color: #eadbb0; background: #4b4029; border-color: #7d6941; }
+    #flyout-function { margin: 0 0 12px; color: #e0d8c0; font-size: 14px; line-height: 1.7; }
+    .flyout-grid { display: grid; grid-template-columns: 64px 1fr; gap: 8px 10px; margin: 0; font-size: 13px; line-height: 1.55; }
+    .flyout-grid dt { color: #a39b84; }
+    .flyout-grid dd { margin: 0; color: #d5cdb5; }
+
+    @keyframes flyout-in {
+      from { opacity: 0; transform: translateX(-10px) scale(0.98); }
+      to { opacity: 1; transform: translateX(0) scale(1); }
+    }
+
+    @media (max-width: 1180px) {
+      #workspace { grid-template-columns: 232px minmax(0, 1fr) 250px; }
+      .sidebar { padding: 12px; }
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 6px 10px;
+      margin-bottom: 16px;
+      font-size: 12px;
+    }
+
+    .stat-grid dt { color: var(--muted); }
+    .stat-grid dd { margin: 0; font-family: Consolas, monospace; }
+
+    .runtime-note {
+      margin: 0 0 16px;
+      padding: 8px;
+      color: #aeb8a6;
+      background: #111614;
+      border-left: 3px solid var(--accent-2);
+      font-size: 11px;
+      line-height: 1.55;
+    }
+
+    #inspect-card {
+      position: absolute;
+      left: 16px;
+      top: 16px;
+      z-index: 7;
+      width: min(350px, calc(100% - 32px));
+      padding: 14px 15px;
+      pointer-events: none;
+      background: #131916f2;
+      border: 2px solid #8b9b70;
+      box-shadow: 0 10px 30px #000b, inset 0 0 0 1px #334033;
+    }
+    #inspect-card[hidden] { display: none; }
+    .inspect-heading { display: flex; align-items: baseline; gap: 9px; margin-bottom: 10px; }
+    #inspect-title { margin: 0; color: #f0d58e; font-size: 21px; }
+    #inspect-kind { margin-left: auto; color: #aeb9a0; font-size: 11px; }
+    .inspect-grid { display: grid; grid-template-columns: 76px 1fr; gap: 7px 10px; margin: 0; font-size: 13px; line-height: 1.5; }
+    .inspect-grid dt { color: #939985; }
+    .inspect-grid dd { margin: 0; color: #ddd5bd; }
+    #inspect-status.operating { color: #bddd9f; }
+    #inspect-status.stopped { color: #efad96; }
+    #inspect-efficiency.low { color: #efad96; }
+    #inspect-efficiency.medium { color: #e6c36b; }
+    #inspect-efficiency.high { color: #bddd9f; }
+
+    .save-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    #bottombar {
+      display: grid;
+      grid-template-columns: minmax(260px, 1fr) auto minmax(300px, 1fr);
+      align-items: center;
+      gap: 16px;
+      padding: 8px 12px;
+      background: linear-gradient(#202722, #121715);
+      border-top: 2px solid #525c4b;
+      z-index: 2;
+    }
+
+    #selection-info { min-width: 0; }
+    #selection-name { color: #f0d58e; font-weight: 700; }
+    #selection-desc { color: var(--muted); font-size: 12px; }
+
+    #speed-controls {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .speed-button { min-width: 42px; }
+
+    #status-line {
+      overflow: hidden;
+      color: #b8b19b;
+      font-size: 12px;
+      text-align: right;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 900px) {
+      #workspace { grid-template-columns: 184px minmax(0, 1fr); }
+      #rightbar { display: none; }
+      #topbar { grid-template-columns: 1fr auto; }
+      #resources { display: none; }
+      #bottombar { grid-template-columns: 1fr auto; }
+      #status-line { display: none; }
+    }
+
+    @media (max-width: 620px) {
+      #workspace { grid-template-columns: 1fr; }
+      #leftbar { display: none; }
+      #topbar { grid-template-columns: 1fr; height: auto; }
+      #app { grid-template-rows: 56px minmax(0, 1fr) 64px; }
+      .brand small { display: none; }
+      #calendar { position: absolute; right: 10px; min-width: 0; }
+      .top-help { display: none; }
+      .tutorial-card { right: 16px; bottom: 76px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header id="topbar">
+      <div class="brand">
+        <strong>辺境の冠</strong>
+        <small>基盤プロトタイプ 0.1.0</small>
+        <button id="tutorial-open" class="top-help" type="button">？ 遊び方</button>
+        <button id="se-toggle" class="top-help" type="button" aria-pressed="true">♪ SE ON</button>
+      </div>
+      <div id="calendar" aria-live="polite">1年 春 1月 1日</div>
+      <div id="resources" aria-label="都市資源">
+        <span class="resource">人口 <b id="res-population">84</b></span>
+        <span class="resource">食料 <b id="res-food">12,500</b></span>
+        <span class="resource">燃料 <b id="res-fuel">4,200</b></span>
+        <span class="resource">木材 <b id="res-wood">350</b></span>
+        <span class="resource">金 <b id="res-gold">120</b></span>
+        <span class="resource">住宅 <b id="res-housing">84/100</b></span>
+      </div>
+    </header>
+
+    <main id="workspace">
+      <aside id="leftbar" class="sidebar" aria-label="建設道具">
+        <h2 class="panel-title">建設</h2>
+        <div id="tool-list" class="tool-list"></div>
+        <h2 class="panel-title">施設ガイド</h2>
+        <section id="facility-guide" class="facility-guide" aria-live="polite">
+          <div class="guide-heading">
+            <span id="guide-icon" class="tool-icon">i</span>
+            <strong id="guide-name">調査</strong>
+            <span id="guide-status" class="guide-status">利用可能</span>
+          </div>
+          <p id="guide-function">タイルの地形、道路、建物を確認します。</p>
+          <dl class="guide-list">
+            <dt>効果</dt><dd id="guide-effect">情報表示のみ</dd>
+            <dt>置き方</dt><dd id="guide-placement">マップ上へ置く必要はありません</dd>
+            <dt>目安</dt><dd id="guide-advice">最初に周囲の水辺と建設可能地を確認します</dd>
+          </dl>
+        </section>
+        <h2 class="panel-title">操作</h2>
+        <div class="help">
+          左クリック：施設を配置<br>
+          道路：押したままドラッグして一括敷設<br>
+          右・中ドラッグ：移動<br>
+          ホイール：マウス位置を中心にズーム<br>
+          4倍ズーム：道路を歩く住民を表示<br>
+          1〜0・Q/W/E：道具選択 / X：撤去<br>
+          Esc：調査へ戻る<br>
+          Space：一時停止
+        </div>
+      </aside>
+
+      <section id="canvas-wrap" aria-label="都市マップ">
+        <canvas id="gameCanvas" tabindex="0" aria-label="64×64タイルの都市建設マップ"></canvas>
+        <div id="map-badge">64×64 / 2倍</div>
+        <div id="placement-hint">道具を選び、マップへカーソルを合わせてください</div>
+        <div id="toast" role="status"></div>
+        <section id="season-banner" role="dialog" aria-live="assertive" hidden>
+          <div id="season-banner-inner">
+            <div id="season-banner-kicker">SEASON CHANGED</div>
+            <h2 id="season-banner-title">冬が来た</h2>
+            <p id="season-banner-text">食料と燃料の備蓄を確認してください。</p>
+            <button id="season-banner-close" type="button">確認して時間を進める</button>
+          </div>
+        </section>
+        <section id="inspect-card" aria-live="polite" hidden>
+          <div class="inspect-heading">
+            <h2 id="inspect-title">施設名</h2>
+            <span id="inspect-kind">施設</span>
+          </div>
+          <dl class="inspect-grid">
+            <dt>地形</dt><dd id="inspect-terrain">—</dd>
+            <dt>接続</dt><dd id="inspect-connection">—</dd>
+            <dt>利用者</dt><dd id="inspect-residents">—</dd>
+            <dt>行き先</dt><dd id="inspect-visitors">—</dd>
+            <dt>労働者</dt><dd id="inspect-workers">—</dd>
+            <dt>稼働率</dt><dd id="inspect-efficiency">—</dd>
+            <dt>生産/日</dt><dd id="inspect-production">—</dd>
+            <dt>消費/日</dt><dd id="inspect-consumption">—</dd>
+            <dt>保管容量</dt><dd id="inspect-storage">—</dd>
+            <dt>状態</dt><dd id="inspect-status">—</dd>
+          </dl>
+        </section>
+      </section>
+
+      <aside id="rightbar" class="sidebar" aria-label="都市情報と素材在庫">
+        <h2 class="panel-title">冬季予測</h2>
+        <dl class="stat-grid" aria-label="冬季予測">
+          <dt>危険度</dt><dd id="forecast-risk">算定中</dd>
+          <dt>対象日数</dt><dd id="forecast-days">90日</dd>
+          <dt>食料見込</dt><dd id="forecast-food">—</dd>
+          <dt>燃料見込</dt><dd id="forecast-fuel">—</dd>
+          <dt>今日の収支</dt><dd id="daily-flow">—</dd>
+        </dl>
+        <h2 class="panel-title">労働人口</h2>
+        <dl class="stat-grid" aria-label="都市の労働人口">
+          <dt>労働可能</dt><dd id="labor-working-age">50</dd>
+          <dt>就業者</dt><dd id="labor-employed">0</dd>
+          <dt>失業者</dt><dd id="labor-unemployed">50</dd>
+          <dt>扶養人口</dt><dd id="labor-dependents">34</dd>
+        </dl>
+        <h2 class="panel-title">共有在庫 / 上限</h2>
+        <dl class="stat-grid" aria-label="都市の共有在庫と保管上限">
+          <dt>食料</dt><dd id="store-food">12,500 / 15,000</dd>
+          <dt>燃料</dt><dd id="store-fuel">4,200 / 6,000</dd>
+          <dt>木材</dt><dd id="store-wood">350 / 800</dd>
+          <dt>穀物</dt><dd id="mat-grain">120 / 400</dd>
+          <dt>小麦粉</dt><dd id="mat-flour">40 / 200</dd>
+          <dt>石材</dt><dd id="mat-stone">80 / 400</dd>
+          <dt>鉱石</dt><dd id="mat-ore">20 / 200</dd>
+          <dt>道具</dt><dd id="mat-tools">10 / 100</dd>
+          <dt>直近廃棄</dt><dd id="storage-overflow">なし</dd>
+        </dl>
+        <h2 class="panel-title">Debug HUD</h2>
+        <dl class="stat-grid">
+          <dt>FPS</dt><dd id="debug-fps">0</dd>
+          <dt>固定step</dt><dd>100 ms</dd>
+          <dt>今フレーム</dt><dd id="debug-steps">0</dd>
+          <dt>日次更新</dt><dd id="debug-days">0</dd>
+          <dt>タイル</dt><dd id="debug-tile">—</dd>
+          <dt>ズーム</dt><dd id="debug-zoom">2×</dd>
+          <dt>State JSON</dt><dd id="debug-bytes">0 B</dd>
+          <dt>Seed</dt><dd id="debug-seed">0</dd>
+        </dl>
+        <p class="runtime-note">
+          Canvas、選択中の道具、カメラ、描画キャッシュ、経路キャッシュはRuntimeにあり、セーブへ入りません。
+        </p>
+        <h2 class="panel-title">セーブ境界テスト</h2>
+        <div class="save-actions">
+          <button id="save-local">保存</button>
+          <button id="load-local">読込</button>
+          <button id="export-json">JSON出力</button>
+          <button id="import-json">JSON読込</button>
+          <input id="import-file" type="file" accept="application/json,.json" hidden>
+        </div>
+      </aside>
+    </main>
+
+    <footer id="bottombar">
+      <div id="selection-info">
+        <div id="selection-name">調査</div>
+        <div id="selection-desc">タイルの状態を確認します</div>
+      </div>
+      <div id="speed-controls" aria-label="時間速度">
+        <button class="speed-button" data-speed="0" aria-label="一時停止">Ⅱ</button>
+        <button class="speed-button active" data-speed="1">1×</button>
+        <button class="speed-button" data-speed="2">2×</button>
+        <button class="speed-button" data-speed="4">4×</button>
+      </div>
+      <div id="status-line">共有在庫方式の簡易物流 / 経済量はすべて1ゲーム日基準</div>
+    </footer>
+  </div>
+
+  <aside id="tool-flyout" aria-live="polite" hidden>
+    <div id="tool-flyout-inner">
+      <div class="flyout-head">
+        <span id="flyout-icon" class="tool-icon">道</span>
+        <strong id="flyout-name">未舗装路</strong>
+        <span id="flyout-status">効果あり</span>
+      </div>
+      <p id="flyout-function"></p>
+      <dl class="flyout-grid">
+        <dt>効果</dt><dd id="flyout-effect"></dd>
+        <dt>置き方</dt><dd id="flyout-placement"></dd>
+        <dt>おすすめ</dt><dd id="flyout-advice"></dd>
+      </dl>
+    </div>
+  </aside>
+
+  <div id="tutorial-overlay" class="tutorial-overlay" hidden>
+    <section class="tutorial-card" role="dialog" aria-modal="true" aria-labelledby="tutorial-title" aria-describedby="tutorial-text">
+      <header class="tutorial-header">
+        <span class="tutorial-kicker">FRONTIER GUIDE</span>
+        <span id="tutorial-progress" class="tutorial-progress">1 / 8</span>
+      </header>
+      <div class="tutorial-body">
+        <h2 id="tutorial-title">最初の冬を越す</h2>
+        <div id="tutorial-text"></div>
+      </div>
+      <footer class="tutorial-actions">
+        <button id="tutorial-skip" class="skip" type="button">閉じる</button>
+        <button id="tutorial-back" type="button">戻る</button>
+        <button id="tutorial-next" class="next" type="button">次へ</button>
+      </footer>
+    </section>
+  </div>
+
+  <script>
+    'use strict';
+
+    const Crown = {};
+
+    // ========================================
+    // 01. 定数・バランス（経済量は1ゲーム日基準）
+    // ========================================
+    Crown.Config = Object.freeze({
+      GAME_VERSION: '0.1.0',
+      SAVE_VERSION: 1,
+      STORAGE_KEY: 'frontier-crown-save-v1',
+      MAP_WIDTH: 64,
+      MAP_HEIGHT: 64,
+      BASE_TILE_SIZE: 16,
+      ZOOM_LEVELS: Object.freeze([1, 2, 3, 4]),
+      SIM_STEP_MS: 100,
+      MAX_SIM_STEPS_PER_FRAME: 10,
+      DAYS_PER_MONTH: 30,
+      MONTHS_PER_YEAR: 12,
+      GAME_DAYS_PER_REAL_SECOND_AT_1X: 1,
+      MONTHLY_POPULATION_GROWTH_PERMILLE: 5,
+      FOOD_UNITS_PER_PERSON_PER_DAY: 1,
+      NORMAL_FUEL_POPULATION_DIVISOR: 28,
+      WINTER_FUEL_POPULATION_DIVISOR: 3,
+      BASE_HOUSING_CAPACITY: 100,
+      SHELTER_CAPACITY: 16,
+      RESIDENTIAL_GROWTH_THRESHOLD_PERMILLE: 750,
+      RESIDENTIAL_CONSTRUCTION_DAYS: 10,
+      WORKFORCE_RATIO_PERMILLE: 600,
+      DISPLAY_PEOPLE_PER_WORKER_GROUP: 4,
+      BASE_STORAGE_CAPACITY: Object.freeze({
+        food: 15000, fuel: 6000, wood: 800, grain: 400,
+        flour: 200, stone: 400, ore: 200, tools: 100
+      })
+    });
+
+    Crown.Data = Object.freeze({
+      resources: Object.freeze({
+        food: Object.freeze({ name: '食料', short: '食' }),
+        fuel: Object.freeze({ name: '燃料', short: '燃' }),
+        wood: Object.freeze({ name: '木材', short: '木' }),
+        grain: Object.freeze({ name: '穀物', short: '穀' }),
+        flour: Object.freeze({ name: '小麦粉', short: '粉' }),
+        stone: Object.freeze({ name: '石材', short: '石' }),
+        ore: Object.freeze({ name: '鉱石', short: '鉱' }),
+        tools: Object.freeze({ name: '道具', short: '具' }),
+        gold: Object.freeze({ name: '金', short: '金' })
+      }),
+      terrains: Object.freeze({
+        0: Object.freeze({ id: 0, name: '平原', color: '#668351', buildable: true }),
+        1: Object.freeze({ id: 1, name: '森林', color: '#385c3c', buildable: true }),
+        2: Object.freeze({ id: 2, name: '丘陵', color: '#7d7852', buildable: true }),
+        3: Object.freeze({ id: 3, name: '水辺', color: '#375e72', buildable: false })
+      }),
+      tools: Object.freeze([
+        Object.freeze({ id: 'inspect', name: '調査', icon: 'i', hotkey: '1', kind: 'inspect', cost: 0, description: 'タイルの状態を確認します' }),
+        Object.freeze({ id: 'road', name: '未舗装路', icon: '道', hotkey: '2', kind: 'road', cost: 1, description: '建物を共有在庫へ接続します' }),
+        Object.freeze({ id: 'well', name: '井戸', icon: '井', hotkey: '3', kind: 'building', cost: 30, description: '水を供給する序盤施設です' }),
+        Object.freeze({ id: 'forager', name: '採集所', icon: '採', hotkey: '4', kind: 'building', cost: 45, description: '道路接続時、季節に応じた食料を日次生産します' }),
+        Object.freeze({ id: 'woodcutter', name: '木こり小屋', icon: '木', hotkey: '5', kind: 'building', cost: 55, description: '道路接続時、木材と燃料を日次生産します' }),
+        Object.freeze({ id: 'stockpile', name: '資材置き場', icon: '倉', hotkey: '6', kind: 'building', cost: 70, description: '労働者と道路接続に応じて共有在庫の保管上限を増やします' }),
+        Object.freeze({ id: 'housing', name: '住宅区画', icon: '住', hotkey: '7', kind: 'zone', cost: 0, description: '道路・井戸・住宅需要が揃うと10日で仮設住宅になります' }),
+        Object.freeze({ id: 'field', name: '畑', icon: '畑', hotkey: '8', kind: 'building', cost: 20, costs: Object.freeze({ wood: 20 }), description: '平原で季節に応じて穀物を生産します' }),
+        Object.freeze({ id: 'mill', name: '製粉所', icon: '粉', hotkey: '9', kind: 'building', cost: 50, costs: Object.freeze({ wood: 50, stone: 20 }), description: '穀物を小麦粉へ加工します' }),
+        Object.freeze({ id: 'bakery', name: 'パン焼き窯', icon: '焼', hotkey: '0', kind: 'building', cost: 45, costs: Object.freeze({ wood: 45, stone: 15 }), description: '小麦粉と燃料から食料を作ります' }),
+        Object.freeze({ id: 'quarry', name: '採石場', icon: '石', hotkey: 'Q', kind: 'building', cost: 60, costs: Object.freeze({ wood: 60 }), description: '丘陵から石材を切り出します' }),
+        Object.freeze({ id: 'mine', name: '鉱山', icon: '鉱', hotkey: 'W', kind: 'building', cost: 80, costs: Object.freeze({ wood: 80, stone: 30 }), description: '丘陵から鉱石を採掘します' }),
+        Object.freeze({ id: 'smithy', name: '鍛冶場', icon: '鍛', hotkey: 'E', kind: 'building', cost: 70, costs: Object.freeze({ wood: 70, stone: 35 }), description: '鉱石と燃料から道具を作ります' }),
+        Object.freeze({ id: 'demolish', name: '撤去', icon: '×', hotkey: 'X', kind: 'demolish', cost: 0, description: '道路または建物を撤去します' })
+      ]),
+      buildings: Object.freeze({
+        well: Object.freeze({ id: 'well', name: '井戸', color: '#6d91a0', cost: 30, requiresRoad: true, workersRequired: 2, workerPriority: 100, jobName: '水汲み', ratesPerDay: Object.freeze({}) }),
+        forager: Object.freeze({
+          id: 'forager', name: '採集所', color: '#a58b4f', cost: 45, requiresRoad: true, workersRequired: 6,
+          workersRequiredBySeason: Object.freeze({ winter: 3 }), workerPriority: 90, jobName: '採集',
+          ratesPerDay: Object.freeze({
+            spring: Object.freeze({ food: 28 }), summer: Object.freeze({ food: 32 }),
+            autumn: Object.freeze({ food: 24 }), winter: Object.freeze({ food: 6 })
+          })
+        }),
+        woodcutter: Object.freeze({ id: 'woodcutter', name: '木こり小屋', color: '#825b3e', cost: 55, requiresRoad: true, workersRequired: 8, workerPriority: 95, jobName: '伐採', ratesPerDay: Object.freeze({ all: Object.freeze({ wood: 4, fuel: 18 }) }) }),
+        stockpile: Object.freeze({
+          id: 'stockpile', name: '資材置き場', color: '#777f75', cost: 70, requiresRoad: true,
+          workersRequired: 4, workerPriority: 65, jobName: '倉庫管理', ratesPerDay: Object.freeze({}),
+          storageCapacity: Object.freeze({
+            food: 5000, fuel: 3000, wood: 1000, grain: 1500,
+            flour: 800, stone: 1200, ore: 600, tools: 300
+          })
+        }),
+        field: Object.freeze({
+          id: 'field', name: '畑', color: '#a98e3e', requiresRoad: true, requiredTerrain: 0, processOrder: 0,
+          workersRequired: 6, workersRequiredBySeason: Object.freeze({ winter: 1 }), workerPriority: 90, jobName: '農作業',
+          ratesPerDay: Object.freeze({
+            spring: Object.freeze({ grain: 20 }), summer: Object.freeze({ grain: 26 }),
+            autumn: Object.freeze({ grain: 30 }), winter: Object.freeze({ grain: 4 })
+          })
+        }),
+        mill: Object.freeze({
+          id: 'mill', name: '製粉所', color: '#a78e6b', requiresRoad: true, processOrder: 1,
+          workersRequired: 5, workerPriority: 75, jobName: '製粉',
+          inputsPerDay: Object.freeze({ grain: 12 }), ratesPerDay: Object.freeze({ all: Object.freeze({ flour: 9 }) })
+        }),
+        bakery: Object.freeze({
+          id: 'bakery', name: 'パン焼き窯', color: '#a85e42', requiresRoad: true, processOrder: 2,
+          workersRequired: 5, workerPriority: 85, jobName: '製パン',
+          inputsPerDay: Object.freeze({ flour: 8, fuel: 1 }), ratesPerDay: Object.freeze({ all: Object.freeze({ food: 28 }) })
+        }),
+        quarry: Object.freeze({
+          id: 'quarry', name: '採石場', color: '#85816f', requiresRoad: true, requiredTerrain: 2, processOrder: 0,
+          workersRequired: 8, workerPriority: 50, jobName: '採石',
+          ratesPerDay: Object.freeze({ all: Object.freeze({ stone: 8 }) })
+        }),
+        mine: Object.freeze({
+          id: 'mine', name: '鉱山', color: '#555b58', requiresRoad: true, requiredTerrain: 2, processOrder: 0,
+          workersRequired: 10, workerPriority: 45, jobName: '採鉱',
+          ratesPerDay: Object.freeze({ all: Object.freeze({ ore: 6 }) })
+        }),
+        smithy: Object.freeze({
+          id: 'smithy', name: '鍛冶場', color: '#6d5148', requiresRoad: true, processOrder: 1,
+          workersRequired: 6, workerPriority: 30, jobName: '鍛冶',
+          inputsPerDay: Object.freeze({ ore: 4, fuel: 2 }), ratesPerDay: Object.freeze({ all: Object.freeze({ tools: 2 }) })
+        }),
+        shelter: Object.freeze({ id: 'shelter', name: '仮設住宅', color: '#9a7650', cost: 0, requiresRoad: true, workersRequired: 0, workerPriority: 0, housingCapacity: 16, ratesPerDay: Object.freeze({}) })
+      }),
+      facilityGuides: Object.freeze({
+        inspect: Object.freeze({
+          implemented: true,
+          function: '地形、道路、建物に加え、配属人数と実際の稼働率を確認する道具です。資源は消費しません。',
+          effect: '労働者、原料、道路を反映した実生産量と停止理由を表示',
+          placement: '配置不要。確認したいタイルへカーソルを合わせます。',
+          advice: '最初に中央の既設道路と、青い水辺を確認してください。'
+        }),
+        road: Object.freeze({
+          implemented: true,
+          function: '施設を都市の共有在庫へ接続する、現在の簡易物流の中心です。',
+          effect: '隣接施設の生産を有効化。1タイルにつき木材1。',
+          placement: '始点を押したまま終点までドラッグし、離すとL字状に敷設します。既存道路は通過できます。',
+          advice: '中央の道路から横へドラッグし、その上下へ施設を並べます。水辺や建物に当たると手前で止まります。'
+        }),
+        well: Object.freeze({
+          implemented: true,
+          function: '住民へ水を供給し、住宅区画の自然成長を有効にする施設です。',
+          effect: '道路接続された井戸が1棟あると、住宅区画に仮設住宅が成長できます。木材30。',
+          placement: '建設可能地かつ道路の上下左右に隣接。現在は地形による水量差はありません。',
+          advice: '住宅を増やす前に1棟建てます。現在は都市内に道路接続された井戸が1棟あれば有効です。'
+        }),
+        forager: Object.freeze({
+          implemented: true,
+          function: '周辺から食料を集め、都市の共有食料へ毎日加算します。',
+          effect: '春+28、夏+32、秋+24、冬+6 食料/日。木材45。',
+          placement: '建設可能地かつ道路の上下左右に隣接。現在は平原・森林などの地形補正はありません。',
+          advice: '最初の冬までに3棟が目安です。冬は生産が落ちるため、春から備蓄してください。'
+        }),
+        woodcutter: Object.freeze({
+          implemented: true,
+          function: '木材と冬の暖房用燃料を都市の共有在庫へ毎日加算します。',
+          effect: '全季節で木材+4、燃料+18/日。木材55。',
+          placement: '建設可能地かつ道路の上下左右に隣接。現在は森林へ置く追加効果はありません。',
+          advice: '最初の冬までに最低1棟。冬季予測の燃料見込がマイナスなら増設します。'
+        }),
+        stockpile: Object.freeze({
+          implemented: true,
+          function: '都市の共有在庫を管理し、道路接続と配属人数に応じて各資源の保管上限を増やします。',
+          effect: '労働者4人で食料+5,000、燃料+3,000、木材+1,000など。容量超過分は廃棄。木材70。',
+          placement: '建設可能地かつ道路の上下左右に隣接。未接続や無人では追加容量がなくなります。',
+          advice: '在庫が上限へ近づく前に建てます。調査カードで、この施設が実際に増やしている容量を確認できます。'
+        }),
+        housing: Object.freeze({
+          implemented: true,
+          function: '住民が自分で仮設住宅を建てる場所を指定します。区画指定自体は無料です。',
+          effect: '仮設住宅1棟で住宅容量+16。人口が容量の75%以上なら、1区画ずつ10日で完成。',
+          placement: '建設可能地かつ道路の上下左右に隣接。道路接続された井戸が別に必要です。',
+          advice: '井戸を建てたあと、道路沿いへ2〜4区画指定してください。区画へカーソルを合わせると進捗や不足条件が見えます。'
+        }),
+        field: Object.freeze({
+          implemented: true,
+          function: '食料加工の原料になる穀物を季節ごとに収穫します。',
+          effect: '穀物/日：春+20、夏+26、秋+30、冬+4。木材20。',
+          placement: '平原かつ道路に隣接。森林・丘陵・水辺には置けません。',
+          advice: '製粉所1棟につき畑1棟が最低目安です。冬は収穫がほぼ止まります。'
+        }),
+        mill: Object.freeze({
+          implemented: true,
+          function: '畑の穀物を、パン焼き窯が使える小麦粉へ加工します。',
+          effect: '穀物-12 → 小麦粉+9/日。木材50・石材20。',
+          placement: '建設可能地かつ道路に隣接。稼働には共有在庫の穀物が必要です。',
+          advice: '畑とパン焼き窯の間を道路でつなぎます。原料切れは調査表示で確認できます。'
+        }),
+        bakery: Object.freeze({
+          implemented: true,
+          function: '小麦粉を焼き、住民が消費する食料へ変換します。',
+          effect: '小麦粉-8・燃料-1 → 食料+28/日。木材45・石材15。',
+          placement: '建設可能地かつ道路に隣接。小麦粉と燃料の両方が必要です。',
+          advice: '採集所より安定した食料網ですが、畑と製粉所を先に用意します。'
+        }),
+        quarry: Object.freeze({
+          implemented: true,
+          function: '丘陵から、加工施設や鉱山建設に使う石材を切り出します。',
+          effect: '石材+8/日。木材60。',
+          placement: '丘陵かつ道路に隣接。他の地形には置けません。',
+          advice: '製粉所・パン焼き窯・鉱山・鍛冶場を増やす前に建設します。'
+        }),
+        mine: Object.freeze({
+          implemented: true,
+          function: '丘陵の鉱脈から、鍛冶場で使う鉱石を採掘します。',
+          effect: '鉱石+6/日。木材80・石材30。',
+          placement: '丘陵かつ道路に隣接。他の地形には置けません。',
+          advice: '石材を確保したあとに建設し、鍛冶場へ鉱石を供給します。'
+        }),
+        smithy: Object.freeze({
+          implemented: true,
+          function: '鉱石を鍛えて、将来の高度施設で使う道具を生産します。',
+          effect: '鉱石-4・燃料-2 → 道具+2/日。木材70・石材35。',
+          placement: '建設可能地かつ道路に隣接。鉱石と燃料の両方が必要です。',
+          advice: '現段階では道具の生産網づくりが目的です。高度施設の建設費へ順次使います。'
+        }),
+        demolish: Object.freeze({
+          implemented: true,
+          function: '配置した道路または施設を取り除きます。',
+          effect: '撤去のみ。現在は建設資源が返却されません。',
+          placement: '道路または施設があるタイルへ使用します。',
+          advice: '道路を撤去すると、隣接施設が共有在庫から切断され、生産が止まる場合があります。'
+        })
+      })
+    });
+
+    // ========================================
+    // 02. ユーティリティ
+    // ========================================
+    Crown.Util = (() => {
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function tileIndex(x, y, width = Crown.Config.MAP_WIDTH) {
+        return y * width + x;
+      }
+
+      function createSeededRandom(seed) {
+        let value = seed >>> 0;
+        return function random() {
+          value += 0x6D2B79F5;
+          let result = value;
+          result = Math.imul(result ^ (result >>> 15), result | 1);
+          result ^= result + Math.imul(result ^ (result >>> 7), result | 61);
+          return ((result ^ (result >>> 14)) >>> 0) / 4294967296;
+        };
+      }
+
+      function deepClone(value) {
+        return JSON.parse(JSON.stringify(value));
+      }
+
+      function formatInteger(value) {
+        return Math.trunc(value).toLocaleString('ja-JP');
+      }
+
+      function formatResourceMap(values, useFullNames = false, showSign = false) {
+        const parts = [];
+        for (const [resource, rawValue] of Object.entries(values || {})) {
+          const value = Math.trunc(rawValue || 0);
+          if (value === 0) continue;
+          const definition = Crown.Data.resources[resource] || { name: resource, short: resource };
+          const label = useFullNames ? definition.name : definition.short;
+          const sign = showSign && value > 0 ? '+' : '';
+          parts.push(`${label}${sign}${formatInteger(value)}`);
+        }
+        return parts.length > 0 ? parts.join(' / ') : 'なし';
+      }
+
+      function seasonKeyForMonth(month) {
+        if (month <= 3) return 'spring';
+        if (month <= 6) return 'summer';
+        if (month <= 9) return 'autumn';
+        return 'winter';
+      }
+
+      return Object.freeze({ clamp, tileIndex, createSeededRandom, deepClone, formatInteger, formatResourceMap, seasonKeyForMonth });
+    })();
+
+    // ========================================
+    // 03. 保存可能なゲーム状態
+    // ========================================
+    Crown.StateFactory = (() => {
+      function generateTerrain(seed, width, height) {
+        const random = Crown.Util.createSeededRandom(seed);
+        let elevation = Array.from({ length: width * height }, () => random());
+        let moisture = Array.from({ length: width * height }, () => random());
+
+        for (let pass = 0; pass < 4; pass += 1) {
+          const nextElevation = elevation.slice();
+          const nextMoisture = moisture.slice();
+          for (let y = 1; y < height - 1; y += 1) {
+            for (let x = 1; x < width - 1; x += 1) {
+              const index = Crown.Util.tileIndex(x, y, width);
+              let elevationSum = 0;
+              let moistureSum = 0;
+              for (let dy = -1; dy <= 1; dy += 1) {
+                for (let dx = -1; dx <= 1; dx += 1) {
+                  const neighbor = Crown.Util.tileIndex(x + dx, y + dy, width);
+                  elevationSum += elevation[neighbor];
+                  moistureSum += moisture[neighbor];
+                }
+              }
+              nextElevation[index] = elevationSum / 9;
+              nextMoisture[index] = moistureSum / 9;
+            }
+          }
+          elevation = nextElevation;
+          moisture = nextMoisture;
+        }
+
+        const terrain = new Array(width * height).fill(0);
+        for (let y = 0; y < height; y += 1) {
+          for (let x = 0; x < width; x += 1) {
+            const index = Crown.Util.tileIndex(x, y, width);
+            const edge = Math.min(x, y, width - 1 - x, height - 1 - y);
+            const edgePenalty = edge < 3 ? (3 - edge) * 0.045 : 0;
+            const heightValue = elevation[index] - edgePenalty;
+            if (heightValue < 0.42) terrain[index] = 3;
+            else if (heightValue > 0.59) terrain[index] = 2;
+            else if (moisture[index] > 0.51) terrain[index] = 1;
+            else terrain[index] = 0;
+          }
+        }
+
+        const centerX = Math.floor(width / 2);
+        const centerY = Math.floor(height / 2);
+        for (let y = centerY - 4; y <= centerY + 4; y += 1) {
+          for (let x = centerX - 4; x <= centerX + 4; x += 1) {
+            terrain[Crown.Util.tileIndex(x, y, width)] = (x + y) % 5 === 0 ? 1 : 0;
+          }
+        }
+        return terrain;
+      }
+
+      function create(seed = Math.floor(Date.now() % 2147483647)) {
+        const width = Crown.Config.MAP_WIDTH;
+        const height = Crown.Config.MAP_HEIGHT;
+        const tileCount = width * height;
+        const roads = new Array(tileCount).fill(0);
+        const centerX = Math.floor(width / 2);
+        const centerY = Math.floor(height / 2);
+
+        for (let offset = -3; offset <= 3; offset += 1) {
+          roads[Crown.Util.tileIndex(centerX + offset, centerY, width)] = 1;
+        }
+
+        return {
+          saveVersion: Crown.Config.SAVE_VERSION,
+          gameVersion: Crown.Config.GAME_VERSION,
+          world: {
+            seed,
+            width,
+            height,
+            terrain: generateTerrain(seed, width, height),
+            roads,
+            zones: new Array(tileCount).fill(0),
+            zoneProgress: new Array(tileCount).fill(0),
+            workersAssigned: new Array(tileCount).fill(0),
+            buildings: new Array(tileCount).fill(null)
+          },
+          cities: [{
+            id: 'frontier-settlement',
+            name: '名もなき開拓地',
+            population: 84,
+            baseHousingCapacity: Crown.Config.BASE_HOUSING_CAPACITY,
+            resources: {
+              food: 12500,
+              fuel: 4200,
+              wood: 350,
+              grain: 120,
+              flour: 40,
+              stone: 80,
+              ore: 20,
+              tools: 10,
+              gold: 120
+            },
+            economy: {
+              populationGrowthProgressPermille: 0,
+              shortageUnitsThisMonth: { food: 0, fuel: 0 },
+              shortageDaysThisMonth: { food: 0, fuel: 0 },
+              lastDaily: {
+                production: { food: 0, fuel: 0, wood: 0, grain: 0, flour: 0, stone: 0, ore: 0, tools: 0 },
+                consumption: { food: 0, fuel: 0, grain: 0, flour: 0, ore: 0 },
+                shortage: { food: 0, fuel: 0 },
+                overflow: {},
+                connectedBuildings: 0
+              },
+              lastMonth: { births: 0, deaths: 0, tax: 0 }
+            },
+            labor: {
+              workforceRatioPermille: Crown.Config.WORKFORCE_RATIO_PERMILLE,
+              workingAge: 50,
+              employed: 0,
+              unemployed: 50,
+              dependents: 34,
+              requiredJobs: 0
+            },
+            storage: {
+              baseCapacity: Crown.Util.deepClone(Crown.Config.BASE_STORAGE_CAPACITY),
+              capacity: Crown.Util.deepClone(Crown.Config.BASE_STORAGE_CAPACITY),
+              lastOverflow: {},
+              lastOverflowDay: null,
+              totalOverflow: {}
+            }
+          }],
+          activeCityId: 'frontier-settlement',
+          status: { phase: 'playing', reason: null },
+          time: {
+            year: 1,
+            month: 1,
+            day: 1,
+            totalDays: 0,
+            speed: 1
+          },
+          statistics: {
+            dailyUpdates: 0,
+            monthlyUpdates: 0,
+            totalBirths: 0,
+            totalDeaths: 0,
+            zonesPlaced: 0,
+            housesGrown: 0,
+            buildingsPlaced: 0,
+            roadsPlaced: 7
+          }
+        };
+      }
+
+      return Object.freeze({ create });
+    })();
+
+    Crown.State = Crown.StateFactory.create();
+
+    // ========================================
+    // 04. 保存しない実行時状態
+    // ========================================
+    Crown.Runtime = {
+      selectedTool: 'inspect',
+      hoveredTile: null,
+      camera: { x: 512, y: 512, zoomIndex: 1 },
+      pointer: { x: 0, y: 0, dragging: false, lastX: 0, lastY: 0 },
+      roadDrag: { active: false, pointerId: null, start: null, end: null, path: [] },
+      people: [],
+      peopleDirty: true,
+      peoplePopulation: -1,
+      observedBuildingsPlaced: -1,
+      observedZonesPlaced: -1,
+      observedHousesGrown: -1,
+      observedOverflowTotal: -1,
+      lastSeasonKey: null,
+      seasonResumeSpeed: 1,
+      seasonBannerTimer: 0,
+      snowParticles: [],
+      audioContext: null,
+      audioEnabled: true,
+      pathCache: new Map(),
+      terrainCanvas: null,
+      terrainSeasonKey: '',
+      structuresCanvas: null,
+      structuresDirty: true,
+      accumulatorMs: 0,
+      gameDayAccumulator: 0,
+      lastFrameTime: performance.now(),
+      fps: 0,
+      fpsFrames: 0,
+      fpsElapsedMs: 0,
+      stepsThisFrame: 0,
+      debugStateBytes: 0,
+      debugStateBytesAgeMs: 1000,
+      forecastCacheKey: '',
+      forecastCache: null,
+      toastTimer: 0,
+      canvasCssWidth: 1,
+      canvasCssHeight: 1,
+      dpr: 1
+    };
+
+    // ========================================
+    // 05. 日次シミュレーション
+    // ========================================
+    Crown.Simulation = (() => {
+      function activeCity(state) {
+        return state.cities.find((item) => item.id === state.activeCityId);
+      }
+
+      function hasAdjacentRoad(state, x, y) {
+        const { width, height, roads } = state.world;
+        const directions = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+        return directions.some(([dx, dy]) => {
+          const nx = x + dx;
+          const ny = y + dy;
+          return nx >= 0 && ny >= 0 && nx < width && ny < height && roads[Crown.Util.tileIndex(nx, ny, width)] === 1;
+        });
+      }
+
+      function getBuildingDailyRates(buildingId, season) {
+        const definition = Crown.Data.buildings[buildingId];
+        if (!definition) return { production: {}, consumption: {} };
+        const rates = definition.ratesPerDay || {};
+        return {
+          production: rates[season] || rates.all || {},
+          consumption: definition.inputsPerDay || {}
+        };
+      }
+
+      function getWorkersRequired(definition, season) {
+        return Math.max(0, Math.trunc(definition.workersRequiredBySeason?.[season] ?? definition.workersRequired ?? 0));
+      }
+
+      function buildLaborPlan(state, seasonOverride = null) {
+        const city = activeCity(state);
+        const season = seasonOverride || Crown.Util.seasonKeyForMonth(state.time.month);
+        const ratio = city.labor?.workforceRatioPermille ?? Crown.Config.WORKFORCE_RATIO_PERMILLE;
+        const workingAge = Math.min(city.population, Math.floor(city.population * ratio / 1000));
+        const assignments = new Array(state.world.buildings.length).fill(0);
+        const jobs = [];
+        let requiredJobs = 0;
+
+        for (let index = 0; index < state.world.buildings.length; index += 1) {
+          const buildingId = state.world.buildings[index];
+          if (!buildingId) continue;
+          const definition = Crown.Data.buildings[buildingId];
+          const required = getWorkersRequired(definition, season);
+          if (required <= 0) continue;
+          const x = index % state.world.width;
+          const y = Math.floor(index / state.world.width);
+          if (!hasAdjacentRoad(state, x, y)) continue;
+          requiredJobs += required;
+          jobs.push({ index, required, priority: definition.workerPriority || 0 });
+        }
+
+        jobs.sort((a, b) => b.priority - a.priority || a.index - b.index);
+        let remaining = workingAge;
+        for (const job of jobs) {
+          const assigned = Math.min(job.required, remaining);
+          assignments[job.index] = assigned;
+          remaining -= assigned;
+        }
+        const employed = workingAge - remaining;
+        return {
+          season,
+          assignments,
+          workingAge,
+          employed,
+          unemployed: remaining,
+          dependents: Math.max(0, city.population - workingAge),
+          requiredJobs
+        };
+      }
+
+      function assignWorkers(state, seasonOverride = null) {
+        const plan = buildLaborPlan(state, seasonOverride);
+        const previous = state.world.workersAssigned || [];
+        const changed = previous.length !== plan.assignments.length || plan.assignments.some((value, index) => value !== previous[index]);
+        state.world.workersAssigned = plan.assignments;
+        const city = activeCity(state);
+        city.labor ??= {};
+        city.labor.workforceRatioPermille ??= Crown.Config.WORKFORCE_RATIO_PERMILLE;
+        city.labor.workingAge = plan.workingAge;
+        city.labor.employed = plan.employed;
+        city.labor.unemployed = plan.unemployed;
+        city.labor.dependents = plan.dependents;
+        city.labor.requiredJobs = plan.requiredJobs;
+        if (changed && state === Crown.State && Crown.Runtime) Crown.Runtime.peopleDirty = true;
+        return plan;
+      }
+
+      function scaleResourceMap(values, efficiencyPermille) {
+        const scaled = {};
+        for (const [resource, amount] of Object.entries(values || {})) {
+          scaled[resource] = Math.floor(Math.trunc(amount) * efficiencyPermille / 1000);
+        }
+        return scaled;
+      }
+
+      function getInputEfficiency(resources, inputs) {
+        const entries = Object.entries(inputs || {});
+        if (entries.length === 0) return 1000;
+        let efficiency = 1000;
+        for (const [resource, amount] of entries) {
+          if (amount <= 0) continue;
+          efficiency = Math.min(efficiency, Math.floor((resources[resource] || 0) * 1000 / amount));
+        }
+        return Crown.Util.clamp(efficiency, 0, 1000);
+      }
+
+      function getFacilityOperation(state, index, season, assignments, resources = null) {
+        const buildingId = state.world.buildings[index];
+        if (!buildingId) return null;
+        const definition = Crown.Data.buildings[buildingId];
+        const city = activeCity(state);
+        const availableResources = resources || city.resources;
+        const x = index % state.world.width;
+        const y = Math.floor(index / state.world.width);
+        const connected = hasAdjacentRoad(state, x, y);
+        const required = getWorkersRequired(definition, season);
+        const assigned = connected ? Math.min(required, assignments[index] || 0) : 0;
+        const workerEfficiencyPermille = required > 0 ? Math.floor(assigned * 1000 / required) : 1000;
+        const rates = getBuildingDailyRates(buildingId, season);
+        const inputEfficiencyPermille = getInputEfficiency(availableResources, rates.consumption);
+        const roadEfficiencyPermille = connected || !definition.requiresRoad ? 1000 : 0;
+        const effectiveEfficiencyPermille = Math.floor(
+          workerEfficiencyPermille * inputEfficiencyPermille * roadEfficiencyPermille / 1000000
+        );
+        return {
+          buildingId,
+          definition,
+          connected,
+          workersRequired: required,
+          workersAssigned: assigned,
+          workerEfficiencyPermille,
+          inputEfficiencyPermille,
+          roadEfficiencyPermille,
+          effectiveEfficiencyPermille,
+          baseProduction: rates.production,
+          baseConsumption: rates.consumption,
+          production: scaleResourceMap(rates.production, effectiveEfficiencyPermille),
+          consumption: scaleResourceMap(rates.consumption, effectiveEfficiencyPermille)
+        };
+      }
+
+      function ensureStorageState(city) {
+        city.storage ??= {};
+        city.storage.baseCapacity ??= Crown.Util.deepClone(Crown.Config.BASE_STORAGE_CAPACITY);
+        for (const [resource, amount] of Object.entries(Crown.Config.BASE_STORAGE_CAPACITY)) {
+          city.storage.baseCapacity[resource] ??= amount;
+        }
+        city.storage.capacity ??= Crown.Util.deepClone(city.storage.baseCapacity);
+        city.storage.lastOverflow ??= {};
+        city.storage.lastOverflowDay ??= null;
+        city.storage.totalOverflow ??= {};
+        return city.storage;
+      }
+
+      function getStorageContribution(state, index, seasonOverride = null) {
+        const buildingId = state.world.buildings[index];
+        const definition = Crown.Data.buildings[buildingId];
+        if (!definition?.storageCapacity) return { base: {}, actual: {}, efficiencyPermille: 0 };
+        const season = seasonOverride || Crown.Util.seasonKeyForMonth(state.time.month);
+        const laborPlan = buildLaborPlan(state, season);
+        const operation = getFacilityOperation(state, index, season, laborPlan.assignments);
+        return {
+          base: definition.storageCapacity,
+          actual: scaleResourceMap(definition.storageCapacity, operation.effectiveEfficiencyPermille),
+          efficiencyPermille: operation.effectiveEfficiencyPermille
+        };
+      }
+
+      function getStorageCapacity(state, seasonOverride = null) {
+        const city = activeCity(state);
+        const storage = ensureStorageState(city);
+        const season = seasonOverride || Crown.Util.seasonKeyForMonth(state.time.month);
+        const laborPlan = buildLaborPlan(state, season);
+        const capacity = Crown.Util.deepClone(storage.baseCapacity);
+        for (let index = 0; index < state.world.buildings.length; index += 1) {
+          const definition = Crown.Data.buildings[state.world.buildings[index]];
+          if (!definition?.storageCapacity) continue;
+          const operation = getFacilityOperation(state, index, season, laborPlan.assignments);
+          const contribution = scaleResourceMap(definition.storageCapacity, operation.effectiveEfficiencyPermille);
+          for (const [resource, amount] of Object.entries(contribution)) {
+            capacity[resource] = Math.trunc((capacity[resource] || 0) + amount);
+          }
+        }
+        return capacity;
+      }
+
+      function enforceStorageLimits(state, seasonOverride = null) {
+        const city = activeCity(state);
+        const storage = ensureStorageState(city);
+        const capacity = getStorageCapacity(state, seasonOverride);
+        const overflow = {};
+        for (const [resource, limit] of Object.entries(capacity)) {
+          const current = Math.max(0, Math.trunc(city.resources[resource] || 0));
+          if (current > limit) {
+            overflow[resource] = current - limit;
+            city.resources[resource] = limit;
+          } else {
+            city.resources[resource] = current;
+          }
+        }
+        storage.capacity = capacity;
+        if (Object.keys(overflow).length > 0) {
+          storage.lastOverflow = overflow;
+          storage.lastOverflowDay = state.time.totalDays;
+          for (const [resource, amount] of Object.entries(overflow)) {
+            storage.totalOverflow[resource] = Math.trunc((storage.totalOverflow[resource] || 0) + amount);
+          }
+        }
+        return overflow;
+      }
+
+      function getDailySummary(state, seasonOverride = null) {
+        const city = activeCity(state);
+        const season = seasonOverride || Crown.Util.seasonKeyForMonth(state.time.month);
+        const laborPlan = buildLaborPlan(state, season);
+        const production = { food: 0, fuel: 0, wood: 0, grain: 0, flour: 0, stone: 0, ore: 0, tools: 0 };
+        const facilityConsumption = { grain: 0, flour: 0, ore: 0, fuel: 0 };
+        let connectedBuildings = 0;
+
+        for (let index = 0; index < state.world.buildings.length; index += 1) {
+          const buildingId = state.world.buildings[index];
+          if (!buildingId) continue;
+          const x = index % state.world.width;
+          const y = Math.floor(index / state.world.width);
+          if (!hasAdjacentRoad(state, x, y)) continue;
+          connectedBuildings += 1;
+          const operation = getFacilityOperation(state, index, season, laborPlan.assignments);
+          for (const [resource, amount] of Object.entries(operation.production)) {
+            production[resource] = (production[resource] || 0) + Math.trunc(amount);
+          }
+          for (const [resource, amount] of Object.entries(operation.consumption)) {
+            facilityConsumption[resource] = (facilityConsumption[resource] || 0) + Math.trunc(amount);
+          }
+        }
+
+        const population = city.population;
+        const fuelDivisor = season === 'winter'
+          ? Crown.Config.WINTER_FUEL_POPULATION_DIVISOR
+          : Crown.Config.NORMAL_FUEL_POPULATION_DIVISOR;
+        const consumption = {
+          food: population * Crown.Config.FOOD_UNITS_PER_PERSON_PER_DAY,
+          fuel: (population > 0 ? Math.ceil(population / fuelDivisor) : 0) + (facilityConsumption.fuel || 0),
+          grain: facilityConsumption.grain || 0,
+          flour: facilityConsumption.flour || 0,
+          ore: facilityConsumption.ore || 0
+        };
+        return { season, production, consumption, connectedBuildings, labor: laborPlan };
+      }
+
+      function runDailyEconomy(state) {
+        const city = activeCity(state);
+        const season = Crown.Util.seasonKeyForMonth(state.time.month);
+        const laborPlan = assignWorkers(state, season);
+        const production = { food: 0, fuel: 0, wood: 0, grain: 0, flour: 0, stone: 0, ore: 0, tools: 0 };
+        const consumption = { food: 0, fuel: 0, grain: 0, flour: 0, ore: 0 };
+        const shortage = { food: 0, fuel: 0 };
+        const connected = [];
+
+        for (let index = 0; index < state.world.buildings.length; index += 1) {
+          const buildingId = state.world.buildings[index];
+          if (!buildingId) continue;
+          const x = index % state.world.width;
+          const y = Math.floor(index / state.world.width);
+          if (!hasAdjacentRoad(state, x, y)) continue;
+          connected.push({ index, buildingId, definition: Crown.Data.buildings[buildingId] });
+        }
+        connected.sort((a, b) => (a.definition.processOrder || 0) - (b.definition.processOrder || 0) || a.index - b.index);
+
+        for (const facility of connected) {
+          const operation = getFacilityOperation(state, facility.index, season, laborPlan.assignments, city.resources);
+          if (operation.effectiveEfficiencyPermille <= 0) continue;
+          for (const [resource, amount] of Object.entries(operation.consumption)) {
+            city.resources[resource] = Math.trunc((city.resources[resource] || 0) - amount);
+            consumption[resource] = (consumption[resource] || 0) + Math.trunc(amount);
+          }
+          for (const [resource, amount] of Object.entries(operation.production)) {
+            city.resources[resource] = Math.trunc((city.resources[resource] || 0) + amount);
+            production[resource] = (production[resource] || 0) + Math.trunc(amount);
+          }
+        }
+
+        const fuelDivisor = season === 'winter'
+          ? Crown.Config.WINTER_FUEL_POPULATION_DIVISOR
+          : Crown.Config.NORMAL_FUEL_POPULATION_DIVISOR;
+        const populationConsumption = {
+          food: city.population * Crown.Config.FOOD_UNITS_PER_PERSON_PER_DAY,
+          fuel: city.population > 0 ? Math.ceil(city.population / fuelDivisor) : 0
+        };
+        for (const resource of ['food', 'fuel']) {
+          const wanted = populationConsumption[resource];
+          const available = city.resources[resource] || 0;
+          const consumed = Math.min(available, wanted);
+          city.resources[resource] = Math.trunc(available - consumed);
+          consumption[resource] = (consumption[resource] || 0) + consumed;
+          shortage[resource] = Math.trunc(wanted - consumed);
+          if (shortage[resource] > 0) {
+            city.economy.shortageUnitsThisMonth[resource] += shortage[resource];
+            city.economy.shortageDaysThisMonth[resource] += 1;
+          }
+        }
+
+        const overflow = enforceStorageLimits(state, season);
+
+        city.economy.lastDaily = {
+          production,
+          consumption,
+          shortage,
+          overflow,
+          connectedBuildings: connected.length
+        };
+      }
+
+      function getFacilityStatus(state, index, seasonOverride = null) {
+        const buildingId = state.world.buildings[index];
+        if (!buildingId) return null;
+        const season = seasonOverride || Crown.Util.seasonKeyForMonth(state.time.month);
+        const laborPlan = buildLaborPlan(state, season);
+        const operation = getFacilityOperation(state, index, season, laborPlan.assignments);
+        const city = activeCity(state);
+        const missingInputs = Object.entries(operation.baseConsumption)
+          .filter(([resource, amount]) => (city.resources[resource] || 0) < amount)
+          .map(([resource]) => Crown.Data.resources[resource]?.name || resource);
+        const hasProduction = Object.keys(operation.baseProduction).length > 0;
+        const workerPercent = Math.floor(operation.workerEfficiencyPermille / 10);
+        let status = '稼働中';
+        if (!operation.connected && operation.definition.requiresRoad) status = '停止：道路に未接続';
+        else if (operation.workersRequired > 0 && operation.workersAssigned === 0) status = '停止：配属できる労働者がいません';
+        else if (operation.workerEfficiencyPermille < 1000 && !hasProduction) {
+          status = `サービス低下：労働者不足（${operation.workersAssigned}/${operation.workersRequired}人）`;
+        } else if (operation.workerEfficiencyPermille < 1000 && missingInputs.length > 0) {
+          status = `低稼働：労働者不足 -${100 - workerPercent}% / ${missingInputs.join('・')}不足`;
+        } else if (operation.workerEfficiencyPermille < 1000) {
+          status = `低稼働：労働者不足により生産量 -${100 - workerPercent}%`;
+        } else if (missingInputs.length > 0) {
+          const inputPercent = Math.floor(operation.inputEfficiencyPermille / 10);
+          status = inputPercent > 0 ? `低稼働：${missingInputs.join('・')}不足（原料${inputPercent}%）` : `停止：${missingInputs.join('・')}不足`;
+        } else if (!hasProduction) {
+          status = buildingId === 'shelter' ? '居住可能' : 'サービス稼働中';
+        }
+        return {
+          ...operation,
+          missingInputs,
+          status,
+          operating: operation.connected && operation.effectiveEfficiencyPermille > 0
+        };
+      }
+
+      function getHousingCapacity(state) {
+        const city = activeCity(state);
+        let capacity = city.baseHousingCapacity ?? Crown.Config.BASE_HOUSING_CAPACITY;
+        for (const buildingId of state.world.buildings) {
+          if (buildingId === 'shelter') capacity += Crown.Config.SHELTER_CAPACITY;
+        }
+        return capacity;
+      }
+
+      function hasConnectedWell(state) {
+        const laborPlan = buildLaborPlan(state);
+        for (let index = 0; index < state.world.buildings.length; index += 1) {
+          if (state.world.buildings[index] !== 'well') continue;
+          const x = index % state.world.width;
+          const y = Math.floor(index / state.world.width);
+          if (hasAdjacentRoad(state, x, y) && laborPlan.assignments[index] > 0) return true;
+        }
+        return false;
+      }
+
+      function getResidentialStatus(state, index = null) {
+        const city = activeCity(state);
+        const capacity = getHousingCapacity(state);
+        if (!hasConnectedWell(state)) return { active: false, reason: '道路接続された井戸が必要です', progress: 0 };
+        if (city.population * 1000 < capacity * Crown.Config.RESIDENTIAL_GROWTH_THRESHOLD_PERMILLE) {
+          const needed = Math.ceil(capacity * Crown.Config.RESIDENTIAL_GROWTH_THRESHOLD_PERMILLE / 1000);
+          return { active: false, reason: `住宅需要が不足（人口${city.population}/${needed}以上）`, progress: 0 };
+        }
+
+        if (index !== null) {
+          if (!state.world.zones[index] || state.world.buildings[index]) {
+            return { active: false, reason: '空いている住宅区画ではありません', progress: 0 };
+          }
+          const x = index % state.world.width;
+          const y = Math.floor(index / state.world.width);
+          if (!hasAdjacentRoad(state, x, y)) return { active: false, reason: '道路へ接続されていません', progress: 0 };
+          const firstEligible = state.world.zones.findIndex((zone, candidate) => {
+            if (!zone || state.world.buildings[candidate]) return false;
+            const candidateX = candidate % state.world.width;
+            const candidateY = Math.floor(candidate / state.world.width);
+            return hasAdjacentRoad(state, candidateX, candidateY);
+          });
+          if (firstEligible !== index) {
+            return { active: false, reason: '建設待ち（先の区画から1棟ずつ着工）', progress: 0 };
+          }
+        }
+
+        return { active: true, reason: '住民が建設中です', progress: index === null ? 0 : (state.world.zoneProgress[index] || 0) };
+      }
+
+      function runDailyResidentialConstruction(state) {
+        const generalStatus = getResidentialStatus(state);
+        if (!generalStatus.active) return false;
+
+        for (let index = 0; index < state.world.zones.length; index += 1) {
+          if (!state.world.zones[index] || state.world.buildings[index]) continue;
+          const x = index % state.world.width;
+          const y = Math.floor(index / state.world.width);
+          if (!hasAdjacentRoad(state, x, y)) continue;
+          state.world.zoneProgress[index] = Math.min(
+            Crown.Config.RESIDENTIAL_CONSTRUCTION_DAYS,
+            (state.world.zoneProgress[index] || 0) + 1
+          );
+          if (state.world.zoneProgress[index] >= Crown.Config.RESIDENTIAL_CONSTRUCTION_DAYS) {
+            state.world.buildings[index] = 'shelter';
+            state.world.zoneProgress[index] = 0;
+            state.statistics.buildingsPlaced += 1;
+            state.statistics.housesGrown += 1;
+            if (state === Crown.State) {
+              Crown.Runtime.structuresDirty = true;
+              Crown.Runtime.peopleDirty = true;
+              Crown.Runtime.forecastCacheKey = '';
+            }
+            return true;
+          }
+          if (state === Crown.State) Crown.Runtime.structuresDirty = true;
+          return false;
+        }
+        return false;
+      }
+
+      function advanceDay(state) {
+        // 生産・消費はここだけで1ゲーム日分を整数加算する。
+        runDailyEconomy(state);
+        runDailyResidentialConstruction(state);
+        state.time.totalDays += 1;
+        state.time.day += 1;
+        state.statistics.dailyUpdates += 1;
+
+        if (state.time.day > Crown.Config.DAYS_PER_MONTH) {
+          state.time.day = 1;
+          state.time.month += 1;
+          runMonthEnd(state);
+        }
+
+        if (state.time.month > Crown.Config.MONTHS_PER_YEAR) {
+          state.time.month = 1;
+          state.time.year += 1;
+          assignWorkers(state);
+          enforceStorageLimits(state);
+        }
+      }
+
+      function runMonthEnd(state) {
+        // 月末は人口と税の集計だけ。日次資源量を月額換算しない。
+        const city = activeCity(state);
+        const shortageUnits = city.economy.shortageUnitsThisMonth;
+        const hadShortage = shortageUnits.food > 0 || shortageUnits.fuel > 0;
+        const foodDeaths = shortageUnits.food > 0 ? Math.ceil(shortageUnits.food / 90) : 0;
+        const coldDeaths = shortageUnits.fuel > 0 ? Math.ceil(shortageUnits.fuel / 180) : 0;
+        const deaths = Math.min(city.population, foodDeaths + coldDeaths);
+        city.population -= deaths;
+
+        let births = 0;
+        const housingCapacityBeforeGrowth = getHousingCapacity(state);
+        if (!hadShortage && city.population > 0 && city.population < housingCapacityBeforeGrowth) {
+          city.economy.populationGrowthProgressPermille +=
+            city.population * Crown.Config.MONTHLY_POPULATION_GROWTH_PERMILLE;
+          births = Math.floor(city.economy.populationGrowthProgressPermille / 1000);
+          city.economy.populationGrowthProgressPermille %= 1000;
+          city.population += births;
+        }
+
+        const tax = Math.floor(city.population / 12);
+        city.resources.gold += tax;
+        city.economy.lastMonth = { births, deaths, tax, houseGrown: false, housingCapacity: getHousingCapacity(state) };
+        city.economy.shortageUnitsThisMonth = { food: 0, fuel: 0 };
+        city.economy.shortageDaysThisMonth = { food: 0, fuel: 0 };
+        state.statistics.monthlyUpdates += 1;
+        state.statistics.totalBirths += births;
+        state.statistics.totalDeaths += deaths;
+        assignWorkers(state);
+        enforceStorageLimits(state);
+
+        if (city.population <= 0) {
+          state.status = { phase: 'gameover', reason: '開拓地の住民がいなくなりました' };
+          state.time.speed = 0;
+        }
+      }
+
+      function forecastWinter(state) {
+        const city = activeCity(state);
+        const winter = getDailySummary(state, 'winter');
+        let projectedFood = city.resources.food;
+        let projectedFuel = city.resources.fuel;
+        let preparationDays = 0;
+
+        if (state.time.month < 10) {
+          for (let month = state.time.month; month < 10; month += 1) {
+            const firstDay = month === state.time.month ? state.time.day : 1;
+            const daysInPart = Crown.Config.DAYS_PER_MONTH - firstDay + 1;
+            const preparationSeason = Crown.Util.seasonKeyForMonth(month);
+            const summary = getDailySummary(state, preparationSeason);
+            const capacity = getStorageCapacity(state, preparationSeason);
+            projectedFood = Math.min(capacity.food, projectedFood + (summary.production.food - summary.consumption.food) * daysInPart);
+            projectedFuel = Math.min(capacity.fuel, projectedFuel + (summary.production.fuel - summary.consumption.fuel) * daysInPart);
+            preparationDays += daysInPart;
+          }
+        }
+
+        const winterDays = state.time.month >= 10
+          ? Math.max(1, (13 - state.time.month) * Crown.Config.DAYS_PER_MONTH - state.time.day + 1)
+          : Crown.Config.DAYS_PER_MONTH * 3;
+        const winterCapacity = getStorageCapacity(state, 'winter');
+        projectedFood = Math.min(winterCapacity.food, projectedFood);
+        projectedFuel = Math.min(winterCapacity.fuel, projectedFuel);
+        projectedFood = Math.min(winterCapacity.food, projectedFood + (winter.production.food - winter.consumption.food) * winterDays);
+        projectedFuel = Math.min(winterCapacity.fuel, projectedFuel + (winter.production.fuel - winter.consumption.fuel) * winterDays);
+        let risk = '低';
+        if (projectedFood < 0 || projectedFuel < 0) risk = '高';
+        else if (projectedFood < winter.consumption.food * 15 || projectedFuel < winter.consumption.fuel * 15) risk = '中';
+        return { preparationDays, winterDays, projectedFood, projectedFuel, risk, winter };
+      }
+
+      function updateFixed(stepMs) {
+        if (Crown.State.status.phase === 'gameover') return;
+        const speed = Crown.State.time.speed;
+        if (speed === 0) return;
+
+        Crown.Runtime.gameDayAccumulator +=
+          (stepMs / 1000) * speed * Crown.Config.GAME_DAYS_PER_REAL_SECOND_AT_1X;
+
+        while (Crown.Runtime.gameDayAccumulator >= 1) {
+          advanceDay(Crown.State);
+          Crown.Runtime.gameDayAccumulator -= 1;
+        }
+      }
+
+      return Object.freeze({ advanceDay, getDailySummary, getFacilityStatus, getHousingCapacity, hasConnectedWell, getResidentialStatus, buildLaborPlan, assignWorkers, getStorageCapacity, getStorageContribution, enforceStorageLimits, forecastWinter, updateFixed });
+    })();
+
+    // ========================================
+    // 06. プレイヤー操作（Phase 1は最小限）
+    // ========================================
+    Crown.Commands = (() => {
+      function city() {
+        return Crown.State.cities.find((item) => item.id === Crown.State.activeCityId);
+      }
+
+      function inBounds(x, y) {
+        return x >= 0 && y >= 0 && x < Crown.State.world.width && y < Crown.State.world.height;
+      }
+
+      function hasAdjacentRoad(x, y) {
+        const { width, height, roads } = Crown.State.world;
+        const directions = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+        return directions.some(([dx, dy]) => {
+          const nx = x + dx;
+          const ny = y + dy;
+          return nx >= 0 && ny >= 0 && nx < width && ny < height && roads[Crown.Util.tileIndex(nx, ny, width)] === 1;
+        });
+      }
+
+      function getToolCosts(tool) {
+        if (!tool) return {};
+        if (tool.costs) return tool.costs;
+        return tool.cost > 0 ? { wood: tool.cost } : {};
+      }
+
+      function formatToolCost(tool) {
+        const costs = getToolCosts(tool);
+        return Object.keys(costs).length > 0 ? Crown.Util.formatResourceMap(costs) : tool.hotkey;
+      }
+
+      function validatePlacement(toolId, x, y) {
+        if (!inBounds(x, y)) return { ok: false, reason: 'マップ外です' };
+        const state = Crown.State;
+        const index = Crown.Util.tileIndex(x, y, state.world.width);
+        const terrain = Crown.Data.terrains[state.world.terrain[index]];
+        const tool = Crown.Data.tools.find((item) => item.id === toolId);
+        if (!tool) return { ok: false, reason: '不明な道具です' };
+
+        if (tool.kind === 'inspect') return { ok: true };
+        if (tool.kind === 'demolish') {
+          return state.world.roads[index] || state.world.buildings[index] || state.world.zones[index]
+            ? { ok: true }
+            : { ok: false, reason: '撤去するものがありません' };
+        }
+        if (!terrain.buildable) return { ok: false, reason: '水辺には配置できません' };
+        if (state.world.buildings[index]) return { ok: false, reason: 'すでに建物があります' };
+
+        if (tool.kind === 'road') {
+          if (state.world.roads[index]) return { ok: false, reason: 'すでに道路があります' };
+        } else if (tool.kind === 'zone') {
+          if (state.world.roads[index]) return { ok: false, reason: '道路上は区画指定できません' };
+          if (state.world.zones[index]) return { ok: false, reason: 'すでに住宅区画です' };
+          if (!hasAdjacentRoad(x, y)) return { ok: false, reason: '道路に隣接させてください' };
+        } else {
+          if (state.world.roads[index]) return { ok: false, reason: '道路上には建設できません' };
+          const definition = Crown.Data.buildings[tool.id];
+          if (definition.requiredTerrain !== undefined && definition.requiredTerrain !== state.world.terrain[index]) {
+            return { ok: false, reason: `${Crown.Data.terrains[definition.requiredTerrain].name}にだけ配置できます` };
+          }
+          if (definition.requiresRoad && !hasAdjacentRoad(x, y)) {
+            return { ok: false, reason: '道路に隣接させてください' };
+          }
+        }
+
+        for (const [resource, amount] of Object.entries(getToolCosts(tool))) {
+          if ((city().resources[resource] || 0) < amount) {
+            return { ok: false, reason: `${Crown.Data.resources[resource]?.name || resource}が${amount}必要です` };
+          }
+        }
+        return { ok: true };
+      }
+
+      function build(toolId, x, y) {
+        if (toolId === 'road') return buildRoadPath([{ x, y }]);
+        const result = validatePlacement(toolId, x, y);
+        if (!result.ok) return result;
+
+        const tool = Crown.Data.tools.find((item) => item.id === toolId);
+        const index = Crown.Util.tileIndex(x, y, Crown.State.world.width);
+        for (const [resource, amount] of Object.entries(getToolCosts(tool))) {
+          city().resources[resource] = Math.trunc((city().resources[resource] || 0) - amount);
+        }
+
+        if (tool.kind === 'building') {
+          Crown.State.world.buildings[index] = tool.id;
+          Crown.State.statistics.buildingsPlaced += 1;
+        } else if (tool.kind === 'zone') {
+          Crown.State.world.zones[index] = 1;
+          Crown.State.world.zoneProgress[index] = 0;
+          Crown.State.statistics.zonesPlaced += 1;
+        }
+        Crown.Runtime.structuresDirty = true;
+        Crown.Runtime.forecastCacheKey = '';
+        Crown.Runtime.peopleDirty = true;
+        Crown.Simulation.assignWorkers(Crown.State);
+        Crown.Simulation.enforceStorageLimits(Crown.State);
+        return { ok: true, reason: `${tool.name}を配置しました` };
+      }
+
+      function createRoadPath(start, end) {
+        if (!start || !end) return [];
+        const path = [];
+        const add = (x, y) => {
+          const previous = path[path.length - 1];
+          if (!previous || previous.x !== x || previous.y !== y) path.push({ x, y });
+        };
+        const horizontalFirst = Math.abs(end.x - start.x) >= Math.abs(end.y - start.y);
+
+        if (horizontalFirst) {
+          const xStep = end.x >= start.x ? 1 : -1;
+          for (let x = start.x; x !== end.x + xStep; x += xStep) add(x, start.y);
+          const yStep = end.y >= start.y ? 1 : -1;
+          for (let y = start.y + yStep; y !== end.y + yStep; y += yStep) add(end.x, y);
+        } else {
+          const yStep = end.y >= start.y ? 1 : -1;
+          for (let y = start.y; y !== end.y + yStep; y += yStep) add(start.x, y);
+          const xStep = end.x >= start.x ? 1 : -1;
+          for (let x = start.x + xStep; x !== end.x + xStep; x += xStep) add(x, end.y);
+        }
+        return path;
+      }
+
+      function planRoadPath(path) {
+        const plan = [];
+        let remainingWood = city().resources.wood;
+        let blockedReason = null;
+        for (const tile of path) {
+          const index = inBounds(tile.x, tile.y)
+            ? Crown.Util.tileIndex(tile.x, tile.y, Crown.State.world.width)
+            : -1;
+          if (blockedReason) {
+            plan.push({ ...tile, ok: false, existing: false, cost: 0, reason: blockedReason });
+            continue;
+          }
+          if (index >= 0 && Crown.State.world.roads[index]) {
+            plan.push({ ...tile, ok: true, existing: true, cost: 0, reason: '既存道路' });
+            continue;
+          }
+          const validation = validatePlacement('road', tile.x, tile.y);
+          if (!validation.ok) {
+            blockedReason = validation.reason;
+            plan.push({ ...tile, ok: false, existing: false, cost: 0, reason: blockedReason });
+            continue;
+          }
+          if (remainingWood < 1) {
+            blockedReason = '木材不足';
+            plan.push({ ...tile, ok: false, existing: false, cost: 0, reason: blockedReason });
+            continue;
+          }
+          remainingWood -= 1;
+          plan.push({ ...tile, ok: true, existing: false, cost: 1, reason: '敷設予定' });
+        }
+        return plan;
+      }
+
+      function buildRoadPath(path) {
+        const plan = planRoadPath(path);
+        let placed = 0;
+        let stopReason = null;
+        for (const tile of plan) {
+          if (!tile.ok) {
+            stopReason = tile.reason;
+            break;
+          }
+          if (tile.existing) continue;
+          const index = Crown.Util.tileIndex(tile.x, tile.y, Crown.State.world.width);
+          Crown.State.world.roads[index] = 1;
+          city().resources.wood -= 1;
+          Crown.State.statistics.roadsPlaced += 1;
+          placed += 1;
+        }
+
+        if (placed > 0) {
+          Crown.Simulation.assignWorkers(Crown.State);
+          Crown.Simulation.enforceStorageLimits(Crown.State);
+          Crown.Runtime.pathCache.clear();
+          Crown.Runtime.structuresDirty = true;
+          Crown.Runtime.forecastCacheKey = '';
+          Crown.Runtime.peopleDirty = true;
+          return {
+            ok: true,
+            placed,
+            reason: stopReason
+              ? `道路を${placed}タイル敷設しました（${stopReason}で停止）`
+              : `道路を${placed}タイル敷設しました`
+          };
+        }
+        const firstFailure = plan.find((tile) => !tile.ok);
+        return {
+          ok: false,
+          placed: 0,
+          reason: firstFailure?.reason || (plan.some((tile) => tile.existing) ? '指定範囲はすべて既存道路です' : '道路を敷設できません')
+        };
+      }
+
+      function demolish(x, y) {
+        const result = validatePlacement('demolish', x, y);
+        if (!result.ok) return result;
+        const index = Crown.Util.tileIndex(x, y, Crown.State.world.width);
+        if (Crown.State.world.buildings[index]) {
+          Crown.State.world.buildings[index] = null;
+          Crown.State.world.zoneProgress[index] = 0;
+          Crown.State.world.workersAssigned[index] = 0;
+          Crown.State.statistics.buildingsPlaced = Math.max(0, Crown.State.statistics.buildingsPlaced - 1);
+        } else if (Crown.State.world.roads[index]) {
+          Crown.State.world.roads[index] = 0;
+          Crown.State.statistics.roadsPlaced = Math.max(0, Crown.State.statistics.roadsPlaced - 1);
+          Crown.Runtime.pathCache.clear();
+          Crown.Runtime.peopleDirty = true;
+        } else {
+          Crown.State.world.zones[index] = 0;
+          Crown.State.world.zoneProgress[index] = 0;
+          Crown.State.statistics.zonesPlaced = Math.max(0, Crown.State.statistics.zonesPlaced - 1);
+        }
+        Crown.Runtime.structuresDirty = true;
+        Crown.Runtime.forecastCacheKey = '';
+        Crown.Runtime.peopleDirty = true;
+        Crown.Simulation.assignWorkers(Crown.State);
+        Crown.Simulation.enforceStorageLimits(Crown.State);
+        return { ok: true, reason: '撤去しました' };
+      }
+
+      function setSpeed(speed) {
+        if (![0, 1, 2, 4].includes(speed)) return false;
+        Crown.State.time.speed = speed;
+        return true;
+      }
+
+      return Object.freeze({ validatePlacement, build, createRoadPath, planRoadPath, buildRoadPath, demolish, setSpeed, getToolCosts, formatToolCost });
+    })();
+
+    // ========================================
+    // 07. 表示用住民（Stateへ保存しない）
+    // ========================================
+    Crown.People = (() => {
+      const palettes = Object.freeze([
+        Object.freeze({ coat: '#b85f4a', skin: '#e1b17c' }),
+        Object.freeze({ coat: '#57779b', skin: '#dca879' }),
+        Object.freeze({ coat: '#8b7444', skin: '#edbd88' }),
+        Object.freeze({ coat: '#6e8b55', skin: '#c99063' }),
+        Object.freeze({ coat: '#765a87', skin: '#e4ad78' })
+      ]);
+      let random = Crown.Util.createSeededRandom(Crown.State.world.seed ^ 0x51A7BEEF);
+
+      let destinations = null;
+
+      function roadIndices() {
+        const result = [];
+        for (let index = 0; index < Crown.State.world.roads.length; index += 1) {
+          if (Crown.State.world.roads[index]) result.push(index);
+        }
+        return result;
+      }
+
+      function adjacentRoad(index) {
+        const { width, height, roads } = Crown.State.world;
+        const x = index % width;
+        const y = Math.floor(index / width);
+        for (const [dx, dy] of [[0, 1], [1, 0], [0, -1], [-1, 0]]) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+          if (roads[Crown.Util.tileIndex(nx, ny, width)]) return { x: nx, y: ny };
+        }
+        return null;
+      }
+
+      function collectDestinations(roads) {
+        const groups = { home: [], well: [], producer: [], delivery: [], fallback: [], workplaces: new Map() };
+        const cargoByBuilding = {
+          forager: 'food', woodcutter: 'wood', field: 'grain', mill: 'flour', bakery: 'food',
+          quarry: 'stone', mine: 'ore', smithy: 'tools'
+        };
+        Crown.State.world.buildings.forEach((buildingId, index) => {
+          if (!buildingId) return;
+          const road = adjacentRoad(index);
+          if (!road) return;
+          const base = { ...road, buildingIndex: index, buildingId };
+          const definition = Crown.Data.buildings[buildingId];
+          if ((Crown.State.world.workersAssigned[index] || 0) > 0) {
+            groups.workplaces.set(index, {
+              ...base,
+              kind: 'workplace',
+              cargo: cargoByBuilding[buildingId] || null,
+              label: `${definition.jobName || definition.name}へ出勤中`
+            });
+          }
+          if (buildingId === 'shelter') groups.home.push({ ...base, kind: 'home', label: '帰宅中' });
+          else if (buildingId === 'well') groups.well.push({ ...base, kind: 'well', label: '水汲み中' });
+          else if (buildingId === 'stockpile') groups.delivery.push({ ...base, kind: 'delivery', label: '資材を運搬中' });
+          else if (cargoByBuilding[buildingId]) {
+            groups.producer.push({
+              ...base,
+              kind: 'producer',
+              cargo: cargoByBuilding[buildingId],
+              label: `${Crown.Data.resources[cargoByBuilding[buildingId]].name}を受取中`
+            });
+          }
+        });
+        if (roads.length > 0) {
+          const picks = [roads[0], roads[Math.floor(roads.length / 2)], roads[roads.length - 1]];
+          groups.fallback = [...new Set(picks)].map((index) => ({
+            x: index % Crown.State.world.width,
+            y: Math.floor(index / Crown.State.world.width),
+            kind: 'fallback',
+            label: '町を見回り中'
+          }));
+        }
+        return groups;
+      }
+
+      function findPath(start, end) {
+        const { width, height, roads } = Crown.State.world;
+        const startIndex = Crown.Util.tileIndex(start.x, start.y, width);
+        const endIndex = Crown.Util.tileIndex(end.x, end.y, width);
+        if (startIndex === endIndex) return [{ x: start.x, y: start.y }];
+        const key = `${startIndex}:${endIndex}`;
+        const cached = Crown.Runtime.pathCache.get(key);
+        if (cached) return cached;
+
+        const queue = [startIndex];
+        const previous = new Map([[startIndex, -1]]);
+        for (let cursor = 0; cursor < queue.length; cursor += 1) {
+          const current = queue[cursor];
+          const x = current % width;
+          const y = Math.floor(current / width);
+          for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) {
+            const nx = x + dx;
+            const ny = y + dy;
+            if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+            const next = Crown.Util.tileIndex(nx, ny, width);
+            if (!roads[next] || previous.has(next)) continue;
+            previous.set(next, current);
+            queue.push(next);
+            if (next === endIndex) cursor = queue.length;
+          }
+        }
+        if (!previous.has(endIndex)) return [];
+        const path = [];
+        for (let current = endIndex; current !== -1; current = previous.get(current)) {
+          path.push({ x: current % width, y: Math.floor(current / width) });
+        }
+        path.reverse();
+        Crown.Runtime.pathCache.set(key, path);
+        Crown.Runtime.pathCache.set(`${endIndex}:${startIndex}`, [...path].reverse());
+        return path;
+      }
+
+      function setDestination(person, kind) {
+        const candidates = destinations[kind] || [];
+        for (let offset = 0; offset < candidates.length; offset += 1) {
+          const target = candidates[(person.id + person.trip + offset) % candidates.length];
+          const route = findPath({ x: person.tileX, y: person.tileY }, target);
+          if (route.length === 0) continue;
+          person.target = target;
+          person.task = target.label;
+          person.route = route;
+          person.routeIndex = route.length > 1 ? 1 : route.length;
+          person.nextX = route.length > 1 ? route[1].x : person.tileX;
+          person.nextY = route.length > 1 ? route[1].y : person.tileY;
+          person.wait = route.length > 1 ? 0 : 0.25;
+          return true;
+        }
+        return false;
+      }
+
+      function setWorkplace(person) {
+        if (person.workplaceIndex === null) return false;
+        const target = destinations.workplaces.get(person.workplaceIndex);
+        if (!target) return false;
+        const route = findPath({ x: person.tileX, y: person.tileY }, target);
+        if (route.length === 0) return false;
+        person.target = target;
+        person.task = target.label;
+        person.route = route;
+        person.routeIndex = route.length > 1 ? 1 : route.length;
+        person.nextX = route.length > 1 ? route[1].x : person.tileX;
+        person.nextY = route.length > 1 ? route[1].y : person.tileY;
+        person.wait = route.length > 1 ? 0 : 0.25;
+        return true;
+      }
+
+      function selectNextDestination(person) {
+        person.trip += 1;
+        if (person.cargo) {
+          if (setDestination(person, 'delivery')) return;
+          if (setDestination(person, 'home')) return;
+        }
+        if (person.workplaceIndex !== null) {
+          if (person.lastVisit === 'workplace') {
+            if (setDestination(person, 'home')) return;
+            if (setDestination(person, 'fallback')) return;
+            if (setDestination(person, 'delivery')) return;
+          }
+          if (setWorkplace(person)) return;
+        }
+        if (person.role === 'worker') {
+          if (person.lastVisit === 'producer') {
+            if (setDestination(person, 'delivery')) return;
+            if (setDestination(person, 'home')) return;
+          }
+          if (person.lastVisit === 'delivery' && setDestination(person, 'home')) return;
+          if (setDestination(person, 'producer')) return;
+        } else {
+          if (person.lastVisit === 'well' && setDestination(person, 'home')) return;
+          if (person.lastVisit === 'home' && setDestination(person, 'well')) return;
+          if (setDestination(person, person.id % 2 === 0 ? 'well' : 'home')) return;
+          if (setDestination(person, 'home')) return;
+          if (setDestination(person, 'well')) return;
+        }
+        if (!setDestination(person, 'fallback')) {
+          person.target = null;
+          person.task = '立ち話中';
+          person.route = [];
+          person.nextX = person.tileX;
+          person.nextY = person.tileY;
+          person.wait = 1;
+        }
+      }
+
+      function arrive(person) {
+        if (person.target) {
+          person.lastVisit = person.target.kind;
+          if (person.target.kind === 'producer' || person.target.kind === 'workplace') {
+            person.cargo = person.target.cargo;
+            if (person.cargo) person.task = `${Crown.Data.resources[person.cargo]?.name || '資材'}を運搬中`;
+          } else if (person.target.kind === 'delivery') {
+            person.cargo = null;
+          } else if (person.target.kind === 'home' && person.cargo) {
+            person.cargo = null;
+          }
+        }
+        selectNextDestination(person);
+      }
+
+      function rebuild() {
+        const roads = roadIndices();
+        const city = Crown.State.cities.find((item) => item.id === Crown.State.activeCityId);
+        Crown.Simulation.assignWorkers(Crown.State);
+        const count = Math.min(
+          48,
+          Math.ceil(city.population / Crown.Config.DISPLAY_PEOPLE_PER_WORKER_GROUP),
+          roads.length * 3
+        );
+        random = Crown.Util.createSeededRandom(Crown.State.world.seed ^ Crown.State.statistics.roadsPlaced ^ 0x51A7BEEF);
+        destinations = collectDestinations(roads);
+        Crown.Runtime.people = [];
+        const workplaceRepresentatives = [];
+        for (const [buildingIndex] of destinations.workplaces) {
+          let workers = Crown.State.world.workersAssigned[buildingIndex] || 0;
+          while (workers > 0) {
+            const groupSize = Math.min(Crown.Config.DISPLAY_PEOPLE_PER_WORKER_GROUP, workers);
+            workplaceRepresentatives.push({ buildingIndex, groupSize });
+            workers -= groupSize;
+          }
+        }
+
+        for (let i = 0; i < count; i += 1) {
+          const roadIndex = roads[Math.floor(random() * roads.length)];
+          const tileX = roadIndex % Crown.State.world.width;
+          const tileY = Math.floor(roadIndex / Crown.State.world.width);
+          const representative = workplaceRepresentatives[i] || null;
+          const person = {
+            id: i,
+            tileX,
+            tileY,
+            nextX: tileX,
+            nextY: tileY,
+            progress: 0,
+            speed: 0.65 + random() * 0.35,
+            phase: random() * 8,
+            palette: palettes[i % palettes.length],
+            role: representative ? 'worker' : 'resident',
+            workplaceIndex: representative?.buildingIndex ?? null,
+            representedWorkers: representative?.groupSize ?? Crown.Config.DISPLAY_PEOPLE_PER_WORKER_GROUP,
+            task: '行き先を考え中',
+            cargo: null,
+            target: null,
+            route: [],
+            routeIndex: 0,
+            trip: i,
+            lastVisit: null,
+            wait: 0
+          };
+          selectNextDestination(person);
+          Crown.Runtime.people.push(person);
+        }
+        Crown.Runtime.peoplePopulation = city.population;
+        Crown.Runtime.peopleDirty = false;
+      }
+
+      function ensure() {
+        const city = Crown.State.cities.find((item) => item.id === Crown.State.activeCityId);
+        if (Crown.Runtime.peopleDirty || Crown.Runtime.peoplePopulation !== city.population) rebuild();
+      }
+
+      function update(deltaMs) {
+        if (Crown.Render.currentZoom() !== 4) return;
+        ensure();
+        const seconds = Math.min(deltaMs, 100) / 1000;
+        for (const person of Crown.Runtime.people) {
+          if (person.wait > 0) {
+            person.wait -= seconds;
+            if (person.wait <= 0) arrive(person);
+            continue;
+          }
+          person.progress += person.speed * seconds;
+          person.phase += seconds * 7;
+          while (person.progress >= 1) {
+            person.progress -= 1;
+            person.tileX = person.nextX;
+            person.tileY = person.nextY;
+            person.routeIndex += 1;
+            if (person.routeIndex < person.route.length) {
+              person.nextX = person.route[person.routeIndex].x;
+              person.nextY = person.route[person.routeIndex].y;
+            } else {
+              person.nextX = person.tileX;
+              person.nextY = person.tileY;
+              person.wait = 0.2;
+              break;
+            }
+          }
+        }
+      }
+
+      function draw(context, zoom) {
+        if (zoom !== 4) return;
+        ensure();
+        const tileSize = Crown.Config.BASE_TILE_SIZE;
+        for (const person of Crown.Runtime.people) {
+          const x = Math.round((person.tileX + (person.nextX - person.tileX) * person.progress + 0.5) * tileSize);
+          const y = Math.round((person.tileY + (person.nextY - person.tileY) * person.progress + 0.5) * tileSize);
+          const stride = Math.floor(person.phase) % 2;
+          context.fillStyle = '#10130f66';
+          context.fillRect(x - 2, y + 3, 5, 2);
+          context.fillStyle = '#30281f';
+          context.fillRect(x - 1, y + 1, 1, stride ? 3 : 2);
+          context.fillRect(x + 1, y + 1, 1, stride ? 2 : 3);
+          context.fillStyle = person.palette.coat;
+          context.fillRect(x - 1, y - 2, 3, 4);
+          context.fillStyle = person.palette.skin;
+          context.fillRect(x - 1, y - 4, 3, 2);
+          context.fillStyle = '#4a3829';
+          context.fillRect(x - 1, y - 5, 3, 1);
+          if (person.cargo) {
+            const cargoColors = {
+              food: '#d8bd55', wood: '#815230', grain: '#c9a83f', flour: '#e5dcc3',
+              stone: '#8e918a', ore: '#59646a', tools: '#9fa9a8'
+            };
+            context.fillStyle = cargoColors[person.cargo] || '#45423d';
+            context.fillRect(x + 2, y - 2, 3, 3);
+            if (person.cargo === 'wood') {
+              context.fillStyle = '#c08a52';
+              context.fillRect(x + 2, y - 3, 3, 1);
+            }
+          }
+        }
+      }
+
+      function getTaskSummary() {
+        return Crown.Runtime.people.map((person) => ({ task: person.task, cargo: person.cargo, target: person.target?.kind || null }));
+      }
+
+      function getVisitorsForBuilding(buildingIndex) {
+        ensure();
+        return Crown.Runtime.people.filter((person) => person.target?.buildingIndex === buildingIndex).length;
+      }
+
+      function getTrafficAtTile(x, y) {
+        ensure();
+        return Crown.Runtime.people.filter((person) =>
+          (person.tileX === x && person.tileY === y) || (person.nextX === x && person.nextY === y)
+        ).length;
+      }
+
+      return Object.freeze({ update, draw, rebuild, getTaskSummary, getVisitorsForBuilding, getTrafficAtTile });
+    })();
+
+    // ========================================
+    // 08. 描画
+    // ========================================
+    Crown.Render = (() => {
+      const canvas = document.getElementById('gameCanvas');
+      const context = canvas.getContext('2d', { alpha: false });
+
+      function makeLayer() {
+        const layer = document.createElement('canvas');
+        layer.width = Crown.State.world.width * Crown.Config.BASE_TILE_SIZE;
+        layer.height = Crown.State.world.height * Crown.Config.BASE_TILE_SIZE;
+        const layerContext = layer.getContext('2d');
+        layerContext.imageSmoothingEnabled = false;
+        return layer;
+      }
+
+      function rebuildTerrainLayer() {
+        const tileSize = Crown.Config.BASE_TILE_SIZE;
+        const layer = makeLayer();
+        const layerContext = layer.getContext('2d');
+        const { width, height, terrain, seed } = Crown.State.world;
+        const random = Crown.Util.createSeededRandom(seed ^ 0xA53C9E1D);
+        const season = Crown.Util.seasonKeyForMonth(Crown.State.time.month);
+        const palettes = {
+          spring: ['#668351', '#385c3c', '#7d7852', '#375e72'],
+          summer: ['#73864b', '#345536', '#83764d', '#315a70'],
+          autumn: ['#8a7548', '#665235', '#897052', '#3a6070'],
+          winter: ['#b9c4b0', '#6e7d70', '#aaa89b', '#718d99']
+        };
+        const treeColors = { spring: '#263f2c', summer: '#213a27', autumn: '#74482e', winter: '#4c5c50' };
+
+        for (let y = 0; y < height; y += 1) {
+          for (let x = 0; x < width; x += 1) {
+            const index = Crown.Util.tileIndex(x, y, width);
+            layerContext.fillStyle = palettes[season][terrain[index]];
+            layerContext.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
+
+            const speck = random();
+            if (speck > 0.65) {
+              layerContext.fillStyle = terrain[index] === 3 ? (season === 'winter' ? '#a9c4cb' : '#4b7483') : (season === 'winter' ? '#f5fbf3aa' : '#ffffff12');
+              layerContext.fillRect(x * tileSize + 3 + Math.floor(random() * 8), y * tileSize + 3 + Math.floor(random() * 8), 2, 2);
+            }
+            if (terrain[index] === 1) {
+              layerContext.fillStyle = treeColors[season];
+              layerContext.fillRect(x * tileSize + 4, y * tileSize + 3, 4, 8);
+              layerContext.fillRect(x * tileSize + 9, y * tileSize + 6, 3, 6);
+            } else if (terrain[index] === 2) {
+              layerContext.fillStyle = season === 'winter' ? '#d5d6ce' : '#958b5f';
+              layerContext.fillRect(x * tileSize + 4, y * tileSize + 9, 8, 3);
+              layerContext.fillRect(x * tileSize + 7, y * tileSize + 6, 4, 3);
+            } else if (terrain[index] === 3) {
+              layerContext.fillStyle = season === 'winter' ? '#c5dde0' : '#6e98a0';
+              layerContext.fillRect(x * tileSize + 2, y * tileSize + 5, 7, 1);
+              layerContext.fillRect(x * tileSize + 8, y * tileSize + 11, 6, 1);
+            }
+          }
+        }
+        Crown.Runtime.terrainCanvas = layer;
+        Crown.Runtime.terrainSeasonKey = season;
+      }
+
+      function drawRoad(layerContext, x, y, tileSize) {
+        const { width, height, roads } = Crown.State.world;
+        const connected = (dx, dy) => {
+          const nx = x + dx;
+          const ny = y + dy;
+          return nx >= 0 && ny >= 0 && nx < width && ny < height && roads[Crown.Util.tileIndex(nx, ny, width)] === 1;
+        };
+        const px = x * tileSize;
+        const py = y * tileSize;
+        layerContext.fillStyle = '#8b7352';
+        layerContext.fillRect(px + 5, py + 5, 6, 6);
+        if (connected(0, -1)) layerContext.fillRect(px + 5, py, 6, 7);
+        if (connected(1, 0)) layerContext.fillRect(px + 9, py + 5, 7, 6);
+        if (connected(0, 1)) layerContext.fillRect(px + 5, py + 9, 6, 7);
+        if (connected(-1, 0)) layerContext.fillRect(px, py + 5, 7, 6);
+        layerContext.fillStyle = '#b29a70';
+        layerContext.fillRect(px + 7, py + 7, 2, 2);
+      }
+
+      function drawHousingZone(layerContext, x, y, tileSize, progress) {
+        const px = x * tileSize;
+        const py = y * tileSize;
+        const winter = Crown.Util.seasonKeyForMonth(Crown.State.time.month) === 'winter';
+        layerContext.fillStyle = winter ? '#91b6bf45' : '#d5bd5c42';
+        layerContext.fillRect(px + 1, py + 1, tileSize - 2, tileSize - 2);
+        layerContext.fillStyle = winter ? '#c6e0e4aa' : '#e4ca6faa';
+        layerContext.fillRect(px + 1, py + 1, tileSize - 2, 1);
+        layerContext.fillRect(px + 1, py + tileSize - 2, tileSize - 2, 1);
+        layerContext.fillRect(px + 1, py + 1, 1, tileSize - 2);
+        layerContext.fillRect(px + tileSize - 2, py + 1, 1, tileSize - 2);
+        layerContext.fillRect(px + 4, py + 7, 3, 2);
+        layerContext.fillRect(px + 10, py + 7, 2, 2);
+        if (progress > 0) {
+          const width = Math.max(1, Math.floor(12 * progress / Crown.Config.RESIDENTIAL_CONSTRUCTION_DAYS));
+          layerContext.fillStyle = '#3a2c1eaa';
+          layerContext.fillRect(px + 2, py + 12, 12, 2);
+          layerContext.fillStyle = '#e6c36b';
+          layerContext.fillRect(px + 2, py + 12, width, 2);
+          layerContext.fillStyle = '#8e6a42';
+          layerContext.fillRect(px + 4, py + 4, 1, 7);
+          layerContext.fillRect(px + 11, py + 4, 1, 7);
+          layerContext.fillRect(px + 4, py + 4, 8, 1);
+        }
+      }
+
+      function drawBuilding(layerContext, id, x, y, tileSize) {
+        const building = Crown.Data.buildings[id];
+        const px = x * tileSize;
+        const py = y * tileSize;
+        const winter = Crown.Util.seasonKeyForMonth(Crown.State.time.month) === 'winter';
+        if (id === 'field') {
+          layerContext.fillStyle = winter ? '#b9c4b0' : '#76582d';
+          layerContext.fillRect(px + 1, py + 2, 14, 13);
+          layerContext.fillStyle = winter ? '#e7eee8' : '#d0ad3e';
+          for (let row = 3; row <= 12; row += 3) layerContext.fillRect(px + 2, py + row, 12, 1);
+          layerContext.fillStyle = '#4f6a3e';
+          layerContext.fillRect(px + 7, py + 2, 1, 12);
+          return;
+        }
+        if (id === 'quarry' || id === 'mine') {
+          layerContext.fillStyle = id === 'mine' ? '#343a39' : '#716f63';
+          layerContext.fillRect(px + 1, py + 5, 14, 10);
+          layerContext.fillStyle = id === 'mine' ? '#111716' : '#aaa58f';
+          layerContext.fillRect(px + 5, py + 6, 7, 8);
+          layerContext.fillStyle = id === 'mine' ? '#88764e' : '#d0c9ab';
+          layerContext.fillRect(px + 2, py + 9, 3, 3);
+          layerContext.fillRect(px + 12, py + 11, 3, 3);
+          if (winter) {
+            layerContext.fillStyle = '#edf5f1';
+            layerContext.fillRect(px + 1, py + 4, 14, 2);
+          }
+          return;
+        }
+        layerContext.fillStyle = '#1b211d88';
+        layerContext.fillRect(px + 3, py + 12, 11, 3);
+        layerContext.fillStyle = building.color;
+        layerContext.fillRect(px + 3, py + 6, 10, 8);
+        layerContext.fillStyle = '#463625';
+        layerContext.fillRect(px + 2, py + 5, 12, 3);
+        layerContext.fillRect(px + 5, py + 2, 6, 3);
+        layerContext.fillStyle = '#e0c578';
+        layerContext.fillRect(px + 9, py + 9, 2, 3);
+
+        if (id === 'well') {
+          layerContext.fillStyle = '#7599a8';
+          layerContext.fillRect(px + 4, py + 8, 8, 5);
+          layerContext.fillStyle = '#202e35';
+          layerContext.fillRect(px + 6, py + 9, 4, 2);
+        } else if (id === 'stockpile') {
+          layerContext.fillStyle = '#a98752';
+          layerContext.fillRect(px + 3, py + 9, 4, 4);
+          layerContext.fillRect(px + 9, py + 8, 4, 5);
+        } else if (id === 'shelter') {
+          layerContext.fillStyle = '#d7bd73';
+          layerContext.fillRect(px + 5, py + 8, 2, 2);
+          layerContext.fillRect(px + 10, py + 8, 2, 2);
+        } else if (id === 'mill') {
+          layerContext.fillStyle = '#ded1aa';
+          layerContext.fillRect(px + 1, py + 8, 5, 5);
+          layerContext.fillStyle = '#6c5b40';
+          layerContext.fillRect(px + 3, py + 7, 1, 7);
+          layerContext.fillRect(px + 1, py + 10, 5, 1);
+        } else if (id === 'bakery') {
+          layerContext.fillStyle = '#5a4032';
+          layerContext.fillRect(px + 10, py + 1, 3, 7);
+          layerContext.fillStyle = '#e58a50';
+          layerContext.fillRect(px + 6, py + 10, 3, 2);
+        } else if (id === 'smithy') {
+          layerContext.fillStyle = '#252b2a';
+          layerContext.fillRect(px + 5, py + 9, 6, 2);
+          layerContext.fillRect(px + 7, py + 11, 2, 3);
+          layerContext.fillStyle = '#df8c45';
+          layerContext.fillRect(px + 11, py + 9, 2, 2);
+        }
+        if (winter) {
+          layerContext.fillStyle = '#edf5f1';
+          layerContext.fillRect(px + 2, py + 4, 12, 2);
+          layerContext.fillRect(px + 5, py + 1, 6, 2);
+        }
+      }
+
+      function rebuildStructuresLayer() {
+        const tileSize = Crown.Config.BASE_TILE_SIZE;
+        const layer = makeLayer();
+        const layerContext = layer.getContext('2d');
+        const { width, height, roads, zones, zoneProgress, buildings } = Crown.State.world;
+        for (let y = 0; y < height; y += 1) {
+          for (let x = 0; x < width; x += 1) {
+            const index = Crown.Util.tileIndex(x, y, width);
+            if (zones[index]) drawHousingZone(layerContext, x, y, tileSize, zoneProgress[index] || 0);
+            if (roads[index]) drawRoad(layerContext, x, y, tileSize);
+            if (buildings[index]) drawBuilding(layerContext, buildings[index], x, y, tileSize);
+          }
+        }
+        Crown.Runtime.structuresCanvas = layer;
+        Crown.Runtime.structuresDirty = false;
+      }
+
+      function resize() {
+        const rectangle = canvas.getBoundingClientRect();
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        Crown.Runtime.canvasCssWidth = Math.max(1, rectangle.width);
+        Crown.Runtime.canvasCssHeight = Math.max(1, rectangle.height);
+        Crown.Runtime.dpr = dpr;
+        canvas.width = Math.round(rectangle.width * dpr);
+        canvas.height = Math.round(rectangle.height * dpr);
+        context.imageSmoothingEnabled = false;
+      }
+
+      function currentZoom() {
+        return Crown.Config.ZOOM_LEVELS[Crown.Runtime.camera.zoomIndex];
+      }
+
+      function screenToWorld(screenX, screenY) {
+        const zoom = currentZoom();
+        return {
+          x: Crown.Runtime.camera.x + (screenX - Crown.Runtime.canvasCssWidth / 2) / zoom,
+          y: Crown.Runtime.camera.y + (screenY - Crown.Runtime.canvasCssHeight / 2) / zoom
+        };
+      }
+
+      function screenToTile(screenX, screenY) {
+        const world = screenToWorld(screenX, screenY);
+        const x = Math.floor(world.x / Crown.Config.BASE_TILE_SIZE);
+        const y = Math.floor(world.y / Crown.Config.BASE_TILE_SIZE);
+        if (x < 0 || y < 0 || x >= Crown.State.world.width || y >= Crown.State.world.height) return null;
+        return { x, y };
+      }
+
+      function setZoomAt(nextIndex, screenX, screenY) {
+        nextIndex = Crown.Util.clamp(nextIndex, 0, Crown.Config.ZOOM_LEVELS.length - 1);
+        if (nextIndex === Crown.Runtime.camera.zoomIndex) return;
+        const before = screenToWorld(screenX, screenY);
+        Crown.Runtime.camera.zoomIndex = nextIndex;
+        const after = screenToWorld(screenX, screenY);
+        Crown.Runtime.camera.x += before.x - after.x;
+        Crown.Runtime.camera.y += before.y - after.y;
+        clampCamera();
+      }
+
+      function clampCamera() {
+        const worldWidth = Crown.State.world.width * Crown.Config.BASE_TILE_SIZE;
+        const worldHeight = Crown.State.world.height * Crown.Config.BASE_TILE_SIZE;
+        Crown.Runtime.camera.x = Crown.Util.clamp(Crown.Runtime.camera.x, 0, worldWidth);
+        Crown.Runtime.camera.y = Crown.Util.clamp(Crown.Runtime.camera.y, 0, worldHeight);
+      }
+
+      function panByScreen(dx, dy) {
+        const zoom = currentZoom();
+        Crown.Runtime.camera.x -= dx / zoom;
+        Crown.Runtime.camera.y -= dy / zoom;
+        clampCamera();
+      }
+
+      function drawGrid() {
+        const zoom = currentZoom();
+        if (zoom < 2) return;
+        const tileSize = Crown.Config.BASE_TILE_SIZE;
+        const worldWidth = Crown.State.world.width * tileSize;
+        const worldHeight = Crown.State.world.height * tileSize;
+        context.strokeStyle = zoom >= 4 ? '#10171145' : '#10171128';
+        context.lineWidth = 1 / zoom;
+        context.beginPath();
+        for (let x = 0; x <= worldWidth; x += tileSize) {
+          context.moveTo(x, 0);
+          context.lineTo(x, worldHeight);
+        }
+        for (let y = 0; y <= worldHeight; y += tileSize) {
+          context.moveTo(0, y);
+          context.lineTo(worldWidth, y);
+        }
+        context.stroke();
+      }
+
+      function drawHover() {
+        if (Crown.Runtime.roadDrag.active) return;
+        const tile = Crown.Runtime.hoveredTile;
+        if (!tile) return;
+        const tileSize = Crown.Config.BASE_TILE_SIZE;
+        const validation = Crown.Commands.validatePlacement(Crown.Runtime.selectedTool, tile.x, tile.y);
+        context.fillStyle = validation.ok ? '#f3db7a44' : '#d55f554f';
+        context.strokeStyle = validation.ok ? '#ffe48b' : '#ff8377';
+        context.lineWidth = 1;
+        context.fillRect(tile.x * tileSize, tile.y * tileSize, tileSize, tileSize);
+        context.strokeRect(tile.x * tileSize + 0.5, tile.y * tileSize + 0.5, tileSize - 1, tileSize - 1);
+      }
+
+      function drawRoadDragPreview() {
+        if (!Crown.Runtime.roadDrag.active) return;
+        const tileSize = Crown.Config.BASE_TILE_SIZE;
+        const plan = Crown.Commands.planRoadPath(Crown.Runtime.roadDrag.path);
+        for (const tile of plan) {
+          if (tile.existing) {
+            context.fillStyle = '#7ca3b52f';
+            context.strokeStyle = '#a8cbd8';
+          } else if (tile.ok) {
+            context.fillStyle = '#d7c16c58';
+            context.strokeStyle = '#ffe88b';
+          } else {
+            context.fillStyle = '#d55f5560';
+            context.strokeStyle = '#ff8377';
+          }
+          const px = tile.x * tileSize;
+          const py = tile.y * tileSize;
+          context.fillRect(px, py, tileSize, tileSize);
+          context.lineWidth = 1;
+          context.strokeRect(px + 0.5, py + 0.5, tileSize - 1, tileSize - 1);
+          if (tile.ok && !tile.existing) {
+            context.fillStyle = '#b79b65';
+            context.fillRect(px + 5, py + 5, 6, 6);
+          }
+        }
+      }
+
+      function draw() {
+        const season = Crown.Util.seasonKeyForMonth(Crown.State.time.month);
+        if (
+          Crown.Runtime.observedBuildingsPlaced !== Crown.State.statistics.buildingsPlaced ||
+          Crown.Runtime.observedZonesPlaced !== Crown.State.statistics.zonesPlaced
+        ) {
+          Crown.Runtime.observedBuildingsPlaced = Crown.State.statistics.buildingsPlaced;
+          Crown.Runtime.observedZonesPlaced = Crown.State.statistics.zonesPlaced;
+          Crown.Runtime.structuresDirty = true;
+        }
+        if (Crown.Runtime.terrainSeasonKey !== season) {
+          Crown.Runtime.terrainCanvas = null;
+          Crown.Runtime.structuresDirty = true;
+        }
+        if (!Crown.Runtime.terrainCanvas) rebuildTerrainLayer();
+        if (!Crown.Runtime.structuresCanvas || Crown.Runtime.structuresDirty) rebuildStructuresLayer();
+
+        const dpr = Crown.Runtime.dpr;
+        const width = Crown.Runtime.canvasCssWidth;
+        const height = Crown.Runtime.canvasCssHeight;
+        const zoom = currentZoom();
+        context.setTransform(dpr, 0, 0, dpr, 0, 0);
+        context.fillStyle = '#090d0b';
+        context.fillRect(0, 0, width, height);
+
+        context.save();
+        context.translate(width / 2 - Crown.Runtime.camera.x * zoom, height / 2 - Crown.Runtime.camera.y * zoom);
+        context.scale(zoom, zoom);
+        context.imageSmoothingEnabled = false;
+        context.drawImage(Crown.Runtime.terrainCanvas, 0, 0);
+        drawGrid();
+        context.drawImage(Crown.Runtime.structuresCanvas, 0, 0);
+        Crown.People.draw(context, zoom);
+        drawRoadDragPreview();
+        drawHover();
+        context.restore();
+        Crown.Seasons.drawWeather(context, width, height);
+      }
+
+      function invalidateAll() {
+        Crown.Runtime.terrainCanvas = null;
+        Crown.Runtime.structuresCanvas = null;
+        Crown.Runtime.structuresDirty = true;
+      }
+
+      return Object.freeze({ canvas, resize, draw, screenToTile, setZoomAt, panByScreen, currentZoom, invalidateAll });
+    })();
+
+    // ========================================
+    // 09. UI
+    // ========================================
+    Crown.UI = (() => {
+      const elements = {
+        toolList: document.getElementById('tool-list'),
+        calendar: document.getElementById('calendar'),
+        selectionName: document.getElementById('selection-name'),
+        selectionDesc: document.getElementById('selection-desc'),
+        statusLine: document.getElementById('status-line'),
+        mapBadge: document.getElementById('map-badge'),
+        toast: document.getElementById('toast'),
+        population: document.getElementById('res-population'),
+        food: document.getElementById('res-food'),
+        fuel: document.getElementById('res-fuel'),
+        wood: document.getElementById('res-wood'),
+        gold: document.getElementById('res-gold'),
+        housing: document.getElementById('res-housing'),
+        storeFood: document.getElementById('store-food'),
+        storeFuel: document.getElementById('store-fuel'),
+        storeWood: document.getElementById('store-wood'),
+        grain: document.getElementById('mat-grain'),
+        flour: document.getElementById('mat-flour'),
+        stone: document.getElementById('mat-stone'),
+        ore: document.getElementById('mat-ore'),
+        tools: document.getElementById('mat-tools'),
+        storageOverflow: document.getElementById('storage-overflow'),
+        laborWorkingAge: document.getElementById('labor-working-age'),
+        laborEmployed: document.getElementById('labor-employed'),
+        laborUnemployed: document.getElementById('labor-unemployed'),
+        laborDependents: document.getElementById('labor-dependents'),
+        debugFps: document.getElementById('debug-fps'),
+        debugSteps: document.getElementById('debug-steps'),
+        debugDays: document.getElementById('debug-days'),
+        debugTile: document.getElementById('debug-tile'),
+        debugZoom: document.getElementById('debug-zoom'),
+        debugBytes: document.getElementById('debug-bytes'),
+        debugSeed: document.getElementById('debug-seed'),
+        forecastRisk: document.getElementById('forecast-risk'),
+        forecastDays: document.getElementById('forecast-days'),
+        forecastFood: document.getElementById('forecast-food'),
+        forecastFuel: document.getElementById('forecast-fuel'),
+        dailyFlow: document.getElementById('daily-flow'),
+        placementHint: document.getElementById('placement-hint'),
+        guideIcon: document.getElementById('guide-icon'),
+        guideName: document.getElementById('guide-name'),
+        guideStatus: document.getElementById('guide-status'),
+        guideFunction: document.getElementById('guide-function'),
+        guideEffect: document.getElementById('guide-effect'),
+        guidePlacement: document.getElementById('guide-placement'),
+        guideAdvice: document.getElementById('guide-advice'),
+        seasonBanner: document.getElementById('season-banner'),
+        seasonBannerTitle: document.getElementById('season-banner-title'),
+        seasonBannerText: document.getElementById('season-banner-text'),
+        seasonBannerClose: document.getElementById('season-banner-close'),
+        toolFlyout: document.getElementById('tool-flyout'),
+        flyoutIcon: document.getElementById('flyout-icon'),
+        flyoutName: document.getElementById('flyout-name'),
+        flyoutStatus: document.getElementById('flyout-status'),
+        flyoutFunction: document.getElementById('flyout-function'),
+        flyoutEffect: document.getElementById('flyout-effect'),
+        flyoutPlacement: document.getElementById('flyout-placement'),
+        flyoutAdvice: document.getElementById('flyout-advice'),
+        inspectCard: document.getElementById('inspect-card'),
+        inspectTitle: document.getElementById('inspect-title'),
+        inspectKind: document.getElementById('inspect-kind'),
+        inspectTerrain: document.getElementById('inspect-terrain'),
+        inspectConnection: document.getElementById('inspect-connection'),
+        inspectResidents: document.getElementById('inspect-residents'),
+        inspectVisitors: document.getElementById('inspect-visitors'),
+        inspectWorkers: document.getElementById('inspect-workers'),
+        inspectEfficiency: document.getElementById('inspect-efficiency'),
+        inspectProduction: document.getElementById('inspect-production'),
+        inspectConsumption: document.getElementById('inspect-consumption'),
+        inspectStorage: document.getElementById('inspect-storage'),
+        inspectStatus: document.getElementById('inspect-status')
+      };
+
+      function showToolFlyout(tool, anchor) {
+        const guide = Crown.Data.facilityGuides[tool.id];
+        elements.flyoutIcon.textContent = tool.icon;
+        elements.flyoutName.textContent = tool.name;
+        elements.flyoutStatus.textContent = guide.implemented ? '効果あり' : '効果準備中';
+        elements.flyoutStatus.classList.toggle('planned', !guide.implemented);
+        elements.flyoutFunction.textContent = guide.function;
+        elements.flyoutEffect.textContent = guide.effect;
+        elements.flyoutPlacement.textContent = guide.placement;
+        elements.flyoutAdvice.textContent = guide.advice;
+        elements.toolFlyout.hidden = false;
+        const anchorRect = anchor.getBoundingClientRect();
+        const flyoutRect = elements.toolFlyout.getBoundingClientRect();
+        const viewportWidth = window.innerWidth || 1440;
+        const viewportHeight = window.innerHeight || 900;
+        let left = anchorRect.right + 14;
+        if (left + flyoutRect.width > viewportWidth - 14) left = Math.max(14, anchorRect.left - flyoutRect.width - 14);
+        const top = Crown.Util.clamp(anchorRect.top - 18, 68, Math.max(68, viewportHeight - flyoutRect.height - 18));
+        elements.toolFlyout.style.left = `${left}px`;
+        elements.toolFlyout.style.top = `${top}px`;
+      }
+
+      function hideToolFlyout() {
+        elements.toolFlyout.hidden = true;
+      }
+
+      function buildToolButtons() {
+        elements.toolList.textContent = '';
+        for (const tool of Crown.Data.tools) {
+          const button = document.createElement('button');
+          button.className = `tool-button${tool.kind === 'demolish' ? ' danger' : ''}`;
+          button.dataset.tool = tool.id;
+          button.innerHTML = `<span class="tool-icon">${tool.icon}</span><span>${tool.name}</span><span class="tool-cost">${Crown.Commands.formatToolCost(tool)}</span>`;
+          button.addEventListener('click', () => {
+            selectTool(tool.id);
+            Crown.Audio.play('click');
+          });
+          button.addEventListener('pointerenter', () => showToolFlyout(tool, button));
+          button.addEventListener('pointerleave', hideToolFlyout);
+          button.addEventListener('focus', () => showToolFlyout(tool, button));
+          button.addEventListener('blur', hideToolFlyout);
+          elements.toolList.appendChild(button);
+        }
+      }
+
+      function selectTool(toolId) {
+        const tool = Crown.Data.tools.find((item) => item.id === toolId);
+        if (!tool) return;
+        Crown.Runtime.selectedTool = tool.id;
+        elements.selectionName.textContent = tool.name;
+        elements.selectionDesc.textContent = tool.description;
+        const guide = Crown.Data.facilityGuides[tool.id];
+        elements.guideIcon.textContent = tool.icon;
+        elements.guideName.textContent = tool.name;
+        elements.guideStatus.textContent = guide.implemented ? '効果あり' : '効果準備中';
+        elements.guideStatus.classList.toggle('planned', !guide.implemented);
+        elements.guideFunction.textContent = guide.function;
+        elements.guideEffect.textContent = guide.effect;
+        elements.guidePlacement.textContent = guide.placement;
+        elements.guideAdvice.textContent = guide.advice;
+        elements.placementHint.textContent = `${tool.name}: ${guide.placement}`;
+        elements.placementHint.classList.remove('valid', 'invalid');
+        document.querySelectorAll('[data-tool]').forEach((button) => {
+          button.classList.toggle('active', button.dataset.tool === tool.id);
+        });
+      }
+
+      function seasonForMonth(month) {
+        if (month <= 3) return '春';
+        if (month <= 6) return '夏';
+        if (month <= 9) return '秋';
+        return '冬';
+      }
+
+      function showToast(message, isError = false) {
+        elements.toast.textContent = message;
+        elements.toast.classList.toggle('error', isError);
+        elements.toast.classList.add('show');
+        clearTimeout(Crown.Runtime.toastTimer);
+        Crown.Runtime.toastTimer = setTimeout(() => elements.toast.classList.remove('show'), 1400);
+      }
+
+      function hideSeasonBanner() {
+        clearTimeout(Crown.Runtime.seasonBannerTimer);
+        elements.seasonBanner.hidden = true;
+      }
+
+      function showSeasonBanner(seasonKey, blocking = false) {
+        const names = { spring: '春が来た', summer: '夏が来た', autumn: '秋が来た', winter: '冬が来た' };
+        const messages = {
+          spring: '雪解けの季節です。食料生産と建設を立て直しましょう。',
+          summer: '建設と生産が進む季節です。冬へ向けて備蓄を増やしましょう。',
+          autumn: '収穫と冬支度の季節です。食料と燃料の不足を確認してください。'
+        };
+        elements.seasonBanner.classList.toggle('winter', seasonKey === 'winter');
+        elements.seasonBannerTitle.textContent = names[seasonKey];
+        elements.seasonBannerClose.hidden = !blocking;
+        if (seasonKey === 'winter') {
+          const city = Crown.State.cities.find((item) => item.id === Crown.State.activeCityId);
+          const daily = Crown.Simulation.getDailySummary(Crown.State, 'winter');
+          const foodDays = Math.floor(city.resources.food / Math.max(1, daily.consumption.food - daily.production.food));
+          const fuelDays = Math.floor(city.resources.fuel / Math.max(1, daily.consumption.fuel - daily.production.fuel));
+          elements.seasonBannerText.textContent = `時間を停止しました。現在庫の目安は食料${foodDays}日、燃料${fuelDays}日です。冬季予測を確認してください。`;
+          elements.seasonBannerClose.textContent = Crown.Runtime.seasonResumeSpeed > 0 ? '確認して時間を進める' : '閉じる';
+        } else {
+          elements.seasonBannerText.textContent = messages[seasonKey];
+        }
+        elements.seasonBanner.hidden = false;
+        clearTimeout(Crown.Runtime.seasonBannerTimer);
+        if (!blocking) Crown.Runtime.seasonBannerTimer = setTimeout(hideSeasonBanner, 2400);
+      }
+
+      function renderInspectCard(state, tile) {
+        if (Crown.Runtime.selectedTool !== 'inspect' || !tile) {
+          elements.inspectCard.hidden = true;
+          return;
+        }
+        const index = Crown.Util.tileIndex(tile.x, tile.y, state.world.width);
+        const terrain = Crown.Data.terrains[state.world.terrain[index]];
+        const buildingId = state.world.buildings[index];
+        elements.inspectCard.hidden = false;
+        elements.inspectTerrain.textContent = `${terrain.name} (${tile.x}, ${tile.y})`;
+        elements.inspectStatus.classList.remove('operating', 'stopped');
+        elements.inspectEfficiency.classList.remove('low', 'medium', 'high');
+
+        if (buildingId) {
+          const facility = Crown.Simulation.getFacilityStatus(state, index);
+          const visitors = Crown.People.getVisitorsForBuilding(index);
+          elements.inspectTitle.textContent = facility.definition.name;
+          elements.inspectKind.textContent = buildingId === 'shelter' ? '住宅' : '施設';
+          elements.inspectConnection.textContent = facility.connected ? '道路接続済み' : '道路未接続';
+          if (buildingId === 'shelter') {
+            const shelterIndices = [];
+            state.world.buildings.forEach((id, candidate) => { if (id === 'shelter') shelterIndices.push(candidate); });
+            const ordinal = Math.max(0, shelterIndices.indexOf(index));
+            const city = state.cities.find((item) => item.id === state.activeCityId);
+            const residents = Math.min(Crown.Config.SHELTER_CAPACITY, Math.max(0, city.population - ordinal * Crown.Config.SHELTER_CAPACITY));
+            elements.inspectResidents.textContent = `${residents}/${Crown.Config.SHELTER_CAPACITY}人`;
+          } else {
+            elements.inspectResidents.textContent = '常駐人数は未割当';
+          }
+          elements.inspectVisitors.textContent = `現在${visitors}人が向かっています（1人=最大4人）`;
+          elements.inspectWorkers.textContent = facility.workersRequired > 0
+            ? `${facility.workersAssigned}/${facility.workersRequired}人（${facility.definition.jobName || '勤務'}）`
+            : '配属不要';
+          const efficiencyPercent = Math.floor(facility.effectiveEfficiencyPermille / 10);
+          const workerPercent = Math.floor(facility.workerEfficiencyPermille / 10);
+          const inputPercent = Math.floor(facility.inputEfficiencyPermille / 10);
+          elements.inspectEfficiency.textContent = `${efficiencyPercent}%（労働${workerPercent}% × 原料${inputPercent}%）`;
+          elements.inspectEfficiency.classList.add(efficiencyPercent < 50 ? 'low' : efficiencyPercent < 100 ? 'medium' : 'high');
+          const actualProduction = Crown.Util.formatResourceMap(facility.production, true, true);
+          const baseProduction = Crown.Util.formatResourceMap(facility.baseProduction, true, true);
+          elements.inspectProduction.textContent = facility.effectiveEfficiencyPermille < 1000 && baseProduction !== 'なし'
+            ? `${actualProduction}（基礎 ${baseProduction}）`
+            : actualProduction;
+          const negativeInputs = Object.fromEntries(Object.entries(facility.consumption).map(([resource, amount]) => [resource, -amount]));
+          const baseNegativeInputs = Object.fromEntries(Object.entries(facility.baseConsumption).map(([resource, amount]) => [resource, -amount]));
+          const actualConsumption = Crown.Util.formatResourceMap(negativeInputs, true, true);
+          const baseConsumption = Crown.Util.formatResourceMap(baseNegativeInputs, true, true);
+          elements.inspectConsumption.textContent = facility.effectiveEfficiencyPermille < 1000 && baseConsumption !== 'なし'
+            ? `${actualConsumption}（基礎 ${baseConsumption}）`
+            : actualConsumption;
+          if (facility.definition.storageCapacity) {
+            const storage = Crown.Simulation.getStorageContribution(state, index);
+            const actualStorage = Crown.Util.formatResourceMap(storage.actual, true, true);
+            const baseStorage = Crown.Util.formatResourceMap(storage.base, true, true);
+            elements.inspectStorage.textContent = storage.efficiencyPermille < 1000
+              ? `${actualStorage}（基礎 ${baseStorage}）`
+              : actualStorage;
+          } else {
+            elements.inspectStorage.textContent = '—';
+          }
+          elements.inspectStatus.textContent = facility.status;
+          elements.inspectStatus.classList.add(facility.operating ? 'operating' : 'stopped');
+          return;
+        }
+
+        if (state.world.zones[index]) {
+          const residential = Crown.Simulation.getResidentialStatus(state, index);
+          elements.inspectTitle.textContent = '住宅区画';
+          elements.inspectKind.textContent = '区画';
+          elements.inspectConnection.textContent = '道路沿い';
+          elements.inspectResidents.textContent = '完成後16人';
+          elements.inspectVisitors.textContent = '建設担当が順次着工';
+          elements.inspectWorkers.textContent = '自動建設';
+          elements.inspectEfficiency.textContent = '—';
+          elements.inspectProduction.textContent = 'なし';
+          elements.inspectConsumption.textContent = 'なし';
+          elements.inspectStorage.textContent = '—';
+          elements.inspectStatus.textContent = residential.active
+            ? `建設中 ${residential.progress}/${Crown.Config.RESIDENTIAL_CONSTRUCTION_DAYS}日`
+            : residential.reason;
+          elements.inspectStatus.classList.add(residential.active ? 'operating' : 'stopped');
+          return;
+        }
+
+        if (state.world.roads[index]) {
+          elements.inspectTitle.textContent = '未舗装路';
+          elements.inspectKind.textContent = '道路';
+          elements.inspectConnection.textContent = '共有在庫網';
+          elements.inspectResidents.textContent = '—';
+          elements.inspectVisitors.textContent = `現在${Crown.People.getTrafficAtTile(tile.x, tile.y)}人が通行中`;
+          elements.inspectWorkers.textContent = '—';
+          elements.inspectEfficiency.textContent = '—';
+          elements.inspectProduction.textContent = 'なし';
+          elements.inspectConsumption.textContent = 'なし';
+          elements.inspectStorage.textContent = '—';
+          elements.inspectStatus.textContent = '通行可能';
+          elements.inspectStatus.classList.add('operating');
+          return;
+        }
+
+        elements.inspectTitle.textContent = terrain.name;
+        elements.inspectKind.textContent = '地形';
+        elements.inspectConnection.textContent = '道路なし';
+        elements.inspectResidents.textContent = '0人';
+        elements.inspectVisitors.textContent = '0人';
+        elements.inspectWorkers.textContent = '—';
+        elements.inspectEfficiency.textContent = '—';
+        elements.inspectProduction.textContent = 'なし';
+        elements.inspectConsumption.textContent = 'なし';
+        elements.inspectStorage.textContent = '—';
+        elements.inspectStatus.textContent = terrain.buildable ? '建設可能' : '建設不可';
+        elements.inspectStatus.classList.add(terrain.buildable ? 'operating' : 'stopped');
+      }
+
+      function update(deltaMs = 0) {
+        const state = Crown.State;
+        const time = state.time;
+        const activeCity = state.cities.find((item) => item.id === state.activeCityId);
+        const zoom = Crown.Render.currentZoom();
+        if (Crown.Runtime.observedHousesGrown === -1) {
+          Crown.Runtime.observedHousesGrown = state.statistics.housesGrown;
+        } else if (Crown.Runtime.observedHousesGrown !== state.statistics.housesGrown) {
+          Crown.Runtime.observedHousesGrown = state.statistics.housesGrown;
+          showToast('住宅区画に仮設住宅が成長しました');
+          Crown.Audio.play('build');
+        }
+        const overflowTotal = Object.values(activeCity.storage?.totalOverflow || {})
+          .reduce((sum, amount) => sum + Math.trunc(amount || 0), 0);
+        if (Crown.Runtime.observedOverflowTotal === -1) {
+          Crown.Runtime.observedOverflowTotal = overflowTotal;
+        } else if (overflowTotal > Crown.Runtime.observedOverflowTotal) {
+          Crown.Runtime.observedOverflowTotal = overflowTotal;
+          showToast(`保管容量不足：${Crown.Util.formatResourceMap(activeCity.storage.lastOverflow, true)}を廃棄しました`, true);
+          Crown.Audio.play('warning');
+        }
+        elements.calendar.textContent = `${time.year}年 ${seasonForMonth(time.month)} ${time.month}月 ${time.day}日`;
+        elements.population.textContent = Crown.Util.formatInteger(activeCity.population);
+        elements.food.textContent = Crown.Util.formatInteger(activeCity.resources.food);
+        elements.fuel.textContent = Crown.Util.formatInteger(activeCity.resources.fuel);
+        elements.wood.textContent = Crown.Util.formatInteger(activeCity.resources.wood);
+        elements.gold.textContent = Crown.Util.formatInteger(activeCity.resources.gold);
+        const storageCapacity = Crown.Simulation.getStorageCapacity(state);
+        activeCity.storage.capacity = storageCapacity;
+        const stored = (resource) => `${Crown.Util.formatInteger(activeCity.resources[resource] || 0)} / ${Crown.Util.formatInteger(storageCapacity[resource] || 0)}`;
+        elements.storeFood.textContent = stored('food');
+        elements.storeFuel.textContent = stored('fuel');
+        elements.storeWood.textContent = stored('wood');
+        elements.grain.textContent = stored('grain');
+        elements.flour.textContent = stored('flour');
+        elements.stone.textContent = stored('stone');
+        elements.ore.textContent = stored('ore');
+        elements.tools.textContent = stored('tools');
+        elements.storageOverflow.textContent = Object.keys(activeCity.storage.lastOverflow || {}).length > 0
+          ? `${Crown.Util.formatResourceMap(activeCity.storage.lastOverflow, true)}（${activeCity.storage.lastOverflowDay}日目）`
+          : 'なし';
+        elements.laborWorkingAge.textContent = Crown.Util.formatInteger(activeCity.labor?.workingAge || 0);
+        elements.laborEmployed.textContent = Crown.Util.formatInteger(activeCity.labor?.employed || 0);
+        elements.laborUnemployed.textContent = Crown.Util.formatInteger(activeCity.labor?.unemployed || 0);
+        elements.laborDependents.textContent = Crown.Util.formatInteger(activeCity.labor?.dependents || 0);
+        elements.housing.textContent = `${Crown.Util.formatInteger(activeCity.population)}/${Crown.Util.formatInteger(Crown.Simulation.getHousingCapacity(state))}`;
+        elements.mapBadge.textContent = zoom === 4
+          ? `${state.world.width}×${state.world.height} / ${zoom}倍 / 表示住民${Crown.Runtime.people.length}人`
+          : `${state.world.width}×${state.world.height} / ${zoom}倍`;
+        elements.debugFps.textContent = Crown.Runtime.fps.toFixed(0);
+        elements.debugSteps.textContent = Crown.Runtime.stepsThisFrame;
+        elements.debugDays.textContent = state.statistics.dailyUpdates;
+        elements.debugZoom.textContent = `${zoom}×`;
+        Crown.Runtime.debugStateBytesAgeMs += deltaMs;
+        if (Crown.Runtime.debugStateBytesAgeMs >= 1000) {
+          Crown.Runtime.debugStateBytes = new Blob([JSON.stringify(state)]).size;
+          Crown.Runtime.debugStateBytesAgeMs = 0;
+        }
+        elements.debugBytes.textContent = `${Crown.Runtime.debugStateBytes.toLocaleString('ja-JP')} B`;
+        elements.debugSeed.textContent = state.world.seed;
+
+        const forecastKey = [
+          time.totalDays, activeCity.population, activeCity.resources.food, activeCity.resources.fuel,
+          state.statistics.buildingsPlaced, state.statistics.roadsPlaced
+        ].join(':');
+        if (forecastKey !== Crown.Runtime.forecastCacheKey) {
+          Crown.Runtime.forecastCacheKey = forecastKey;
+          Crown.Runtime.forecastCache = Crown.Simulation.forecastWinter(state);
+        }
+        const forecast = Crown.Runtime.forecastCache;
+        const daily = activeCity.economy.lastDaily;
+        const foodNet = daily.production.food - daily.consumption.food;
+        const fuelNet = daily.production.fuel - daily.consumption.fuel;
+        const signed = (value) => `${value >= 0 ? '+' : ''}${Crown.Util.formatInteger(value)}`;
+        elements.forecastRisk.textContent = forecast.risk;
+        elements.forecastRisk.style.color = forecast.risk === '高' ? '#ff8d7d' : forecast.risk === '中' ? '#e6c36b' : '#9fc47a';
+        elements.forecastDays.textContent = forecast.preparationDays > 0
+          ? `冬${forecast.winterDays}日 + 準備${forecast.preparationDays}日`
+          : `残り${forecast.winterDays}日`;
+        elements.forecastFood.textContent = signed(forecast.projectedFood);
+        elements.forecastFuel.textContent = signed(forecast.projectedFuel);
+        elements.dailyFlow.textContent = `食${signed(foodNet)} 燃${signed(fuelNet)}`;
+
+        const tile = Crown.Runtime.hoveredTile;
+        renderInspectCard(state, tile);
+        if (tile) {
+          const index = Crown.Util.tileIndex(tile.x, tile.y, state.world.width);
+          const terrain = Crown.Data.terrains[state.world.terrain[index]];
+          const buildingId = state.world.buildings[index];
+          const content = buildingId
+            ? Crown.Data.buildings[buildingId].name
+            : state.world.roads[index]
+              ? '未舗装路'
+              : state.world.zones[index]
+                ? '住宅区画'
+                : terrain.name;
+          elements.debugTile.textContent = `${tile.x},${tile.y} ${content}`;
+          elements.statusLine.textContent = `${terrain.name} / ${content} / 経済量は1ゲーム日基準`;
+          const selectedTool = Crown.Data.tools.find((item) => item.id === Crown.Runtime.selectedTool);
+          if (Crown.Runtime.roadDrag.active) {
+            const plan = Crown.Commands.planRoadPath(Crown.Runtime.roadDrag.path);
+            const newTiles = plan.filter((item) => item.ok && !item.existing).length;
+            const failure = plan.find((item) => !item.ok);
+            elements.placementHint.textContent = failure
+              ? `道路: 新設${newTiles}タイル / 木材${newTiles}（${failure.reason}で停止）`
+              : `道路: 新設${newTiles}タイル / 木材${newTiles} — 離すと敷設`;
+            elements.placementHint.classList.toggle('valid', !failure);
+            elements.placementHint.classList.toggle('invalid', Boolean(failure));
+          } else if (selectedTool.kind === 'inspect') {
+            if (state.world.zones[index] && !buildingId) {
+              const residential = Crown.Simulation.getResidentialStatus(state, index);
+              elements.placementHint.textContent = residential.active
+                ? `${tile.x},${tile.y}: 住宅を建設中 ${residential.progress}/${Crown.Config.RESIDENTIAL_CONSTRUCTION_DAYS}日`
+                : `${tile.x},${tile.y}: 住宅区画 — ${residential.reason}`;
+            } else {
+              elements.placementHint.textContent = `${tile.x},${tile.y}: ${terrain.name} / ${content}`;
+            }
+            elements.placementHint.classList.remove('valid', 'invalid');
+          } else {
+            const placement = Crown.Commands.validatePlacement(selectedTool.id, tile.x, tile.y);
+            elements.placementHint.textContent = placement.ok
+              ? `✓ ${selectedTool.name}をここに配置できます`
+              : `× ${placement.reason}`;
+            elements.placementHint.classList.toggle('valid', placement.ok);
+            elements.placementHint.classList.toggle('invalid', !placement.ok);
+          }
+        } else {
+          elements.debugTile.textContent = '—';
+          const selectedTool = Crown.Data.tools.find((item) => item.id === Crown.Runtime.selectedTool);
+          elements.placementHint.textContent = `${selectedTool.name}: ${Crown.Data.facilityGuides[selectedTool.id].placement}`;
+          elements.placementHint.classList.remove('valid', 'invalid');
+          elements.statusLine.textContent = state.status.phase === 'gameover'
+            ? state.status.reason
+            : `接続施設 ${daily.connectedBuildings}棟 / 共有在庫方式 / 日次整数計算`;
+        }
+
+        document.querySelectorAll('[data-speed]').forEach((button) => {
+          button.classList.toggle('active', Number(button.dataset.speed) === time.speed);
+        });
+
+        elements.seasonBannerClose.addEventListener('click', () => Crown.Seasons.dismissBanner());
+      }
+
+      function bindEvents() {
+        const canvas = Crown.Render.canvas;
+        canvas.addEventListener('contextmenu', (event) => event.preventDefault());
+
+        canvas.addEventListener('pointermove', (event) => {
+          const rectangle = canvas.getBoundingClientRect();
+          const x = event.clientX - rectangle.left;
+          const y = event.clientY - rectangle.top;
+          Crown.Runtime.pointer.x = x;
+          Crown.Runtime.pointer.y = y;
+
+          Crown.Runtime.hoveredTile = Crown.Render.screenToTile(x, y);
+          if (Crown.Runtime.roadDrag.active) {
+            if (Crown.Runtime.hoveredTile) {
+              Crown.Runtime.roadDrag.end = Crown.Runtime.hoveredTile;
+              Crown.Runtime.roadDrag.path = Crown.Commands.createRoadPath(
+                Crown.Runtime.roadDrag.start,
+                Crown.Runtime.roadDrag.end
+              );
+            }
+            return;
+          }
+
+          if (Crown.Runtime.pointer.dragging) {
+            Crown.Render.panByScreen(x - Crown.Runtime.pointer.lastX, y - Crown.Runtime.pointer.lastY);
+            Crown.Runtime.pointer.lastX = x;
+            Crown.Runtime.pointer.lastY = y;
+          }
+        });
+
+        canvas.addEventListener('pointerdown', (event) => {
+          canvas.focus();
+          const rectangle = canvas.getBoundingClientRect();
+          const x = event.clientX - rectangle.left;
+          const y = event.clientY - rectangle.top;
+          if (event.button === 1 || event.button === 2) {
+            Crown.Runtime.pointer.dragging = true;
+            Crown.Runtime.pointer.lastX = x;
+            Crown.Runtime.pointer.lastY = y;
+            canvas.setPointerCapture(event.pointerId);
+            return;
+          }
+
+          if (event.button !== 0) return;
+          const tile = Crown.Render.screenToTile(x, y);
+          if (!tile) return;
+          const tool = Crown.Runtime.selectedTool;
+          if (tool === 'inspect') return;
+          if (tool === 'road') {
+            Crown.Runtime.roadDrag.active = true;
+            Crown.Runtime.roadDrag.pointerId = event.pointerId;
+            Crown.Runtime.roadDrag.start = tile;
+            Crown.Runtime.roadDrag.end = tile;
+            Crown.Runtime.roadDrag.path = Crown.Commands.createRoadPath(tile, tile);
+            canvas.setPointerCapture(event.pointerId);
+            return;
+          }
+          const result = tool === 'demolish'
+            ? Crown.Commands.demolish(tile.x, tile.y)
+            : Crown.Commands.build(tool, tile.x, tile.y);
+          showToast(result.reason, !result.ok);
+          if (result.ok) {
+            const toolData = Crown.Data.tools.find((item) => item.id === tool);
+            Crown.Audio.play(tool === 'demolish' ? 'demolish' : toolData.kind === 'zone' ? 'zone' : 'build');
+          }
+        });
+
+        const finishPointer = (event, cancelled = false) => {
+          if (Crown.Runtime.roadDrag.active && Crown.Runtime.roadDrag.pointerId === event.pointerId) {
+            if (!cancelled) {
+              const result = Crown.Commands.buildRoadPath(Crown.Runtime.roadDrag.path);
+              showToast(result.reason, !result.ok);
+              if (result.ok) Crown.Audio.play('road');
+            }
+            Crown.Runtime.roadDrag.active = false;
+            Crown.Runtime.roadDrag.pointerId = null;
+            Crown.Runtime.roadDrag.start = null;
+            Crown.Runtime.roadDrag.end = null;
+            Crown.Runtime.roadDrag.path = [];
+          }
+          Crown.Runtime.pointer.dragging = false;
+          if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+        };
+        canvas.addEventListener('pointerup', (event) => finishPointer(event, false));
+        canvas.addEventListener('pointercancel', (event) => finishPointer(event, true));
+        canvas.addEventListener('pointerleave', () => {
+          if (!Crown.Runtime.pointer.dragging && !Crown.Runtime.roadDrag.active) Crown.Runtime.hoveredTile = null;
+        });
+
+        canvas.addEventListener('wheel', (event) => {
+          event.preventDefault();
+          if (Crown.Runtime.roadDrag.active) return;
+          const rectangle = canvas.getBoundingClientRect();
+          const direction = event.deltaY < 0 ? 1 : -1;
+          Crown.Render.setZoomAt(
+            Crown.Runtime.camera.zoomIndex + direction,
+            event.clientX - rectangle.left,
+            event.clientY - rectangle.top
+          );
+          Crown.Runtime.hoveredTile = Crown.Render.screenToTile(
+            event.clientX - rectangle.left,
+            event.clientY - rectangle.top
+          );
+        }, { passive: false });
+
+        window.addEventListener('keydown', (event) => {
+          if (event.target instanceof HTMLInputElement) return;
+          if (!document.getElementById('tutorial-overlay').hidden) return;
+          if (event.key === 'Escape') {
+            event.preventDefault();
+            const wasBuilding = Crown.Runtime.selectedTool !== 'inspect' || Crown.Runtime.roadDrag.active;
+            if (Crown.Runtime.roadDrag.active) {
+              const pointerId = Crown.Runtime.roadDrag.pointerId;
+              if (pointerId !== null && canvas.hasPointerCapture(pointerId)) canvas.releasePointerCapture(pointerId);
+              Crown.Runtime.roadDrag.active = false;
+              Crown.Runtime.roadDrag.pointerId = null;
+              Crown.Runtime.roadDrag.start = null;
+              Crown.Runtime.roadDrag.end = null;
+              Crown.Runtime.roadDrag.path = [];
+              Crown.Runtime.pointer.dragging = false;
+            }
+            selectTool('inspect');
+            hideToolFlyout();
+            if (wasBuilding) showToast('調査へ戻りました');
+            return;
+          }
+          if (event.code === 'Space') {
+            event.preventDefault();
+            Crown.Commands.setSpeed(Crown.State.time.speed === 0 ? 1 : 0);
+            return;
+          }
+          const pressed = event.key.toUpperCase();
+          const tool = Crown.Data.tools.find((item) => item.hotkey.toUpperCase() === pressed);
+          if (tool) selectTool(tool.id);
+        });
+
+        document.querySelectorAll('[data-speed]').forEach((button) => {
+          button.addEventListener('click', () => Crown.Commands.setSpeed(Number(button.dataset.speed)));
+        });
+
+        window.addEventListener('resize', Crown.Render.resize);
+        document.addEventListener('visibilitychange', () => {
+          Crown.Runtime.lastFrameTime = performance.now();
+          Crown.Runtime.accumulatorMs = 0;
+        });
+      }
+
+      return Object.freeze({ buildToolButtons, bindEvents, selectTool, showToast, showSeasonBanner, hideSeasonBanner, update });
+    })();
+
+    // ========================================
+    // 10. コード生成効果音（BGMは扱わない）
+    // ========================================
+    Crown.Audio = (() => {
+      const PREF_KEY = `${Crown.Config.STORAGE_KEY}-se-enabled`;
+      const toggleButton = document.getElementById('se-toggle');
+
+      function ensureContext() {
+        if (!Crown.Runtime.audioEnabled) return null;
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) return null;
+        if (!Crown.Runtime.audioContext) Crown.Runtime.audioContext = new AudioContextClass();
+        if (Crown.Runtime.audioContext.state === 'suspended') Crown.Runtime.audioContext.resume();
+        return Crown.Runtime.audioContext;
+      }
+
+      function tone(frequency, duration, type = 'square', volume = 0.035, delay = 0) {
+        const audio = ensureContext();
+        if (!audio) return;
+        const start = audio.currentTime + delay;
+        const oscillator = audio.createOscillator();
+        const gain = audio.createGain();
+        oscillator.type = type;
+        oscillator.frequency.setValueAtTime(frequency, start);
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(volume, start + 0.008);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+        oscillator.connect(gain);
+        gain.connect(audio.destination);
+        oscillator.start(start);
+        oscillator.stop(start + duration + 0.02);
+      }
+
+      function play(kind) {
+        if (!Crown.Runtime.audioEnabled) return;
+        if (kind === 'road') {
+          tone(250, 0.055, 'square', 0.025);
+        } else if (kind === 'build') {
+          tone(220, 0.09, 'square', 0.035);
+          tone(330, 0.11, 'square', 0.03, 0.06);
+        } else if (kind === 'zone') {
+          tone(410, 0.06, 'triangle', 0.025);
+          tone(520, 0.08, 'triangle', 0.022, 0.045);
+        } else if (kind === 'demolish') {
+          tone(150, 0.12, 'sawtooth', 0.03);
+          tone(95, 0.14, 'square', 0.025, 0.07);
+        } else if (kind === 'warning') {
+          tone(180, 0.18, 'sawtooth', 0.035);
+          tone(150, 0.22, 'sawtooth', 0.03, 0.2);
+        } else {
+          tone(480, 0.045, 'square', 0.018);
+        }
+      }
+
+      function playSeason(seasonKey) {
+        if (seasonKey === 'winter') {
+          play('warning');
+          tone(620, 0.35, 'sine', 0.025, 0.45);
+        } else {
+          const roots = { spring: 440, summer: 392, autumn: 330 };
+          const root = roots[seasonKey] || 392;
+          tone(root, 0.18, 'triangle', 0.025);
+          tone(root * 1.25, 0.2, 'triangle', 0.022, 0.1);
+          tone(root * 1.5, 0.24, 'triangle', 0.02, 0.2);
+        }
+      }
+
+      function refreshButton() {
+        toggleButton.textContent = Crown.Runtime.audioEnabled ? '♪ SE ON' : '♪ SE OFF';
+        toggleButton.setAttribute('aria-pressed', String(Crown.Runtime.audioEnabled));
+      }
+
+      function toggle() {
+        Crown.Runtime.audioEnabled = !Crown.Runtime.audioEnabled;
+        try { localStorage.setItem(PREF_KEY, Crown.Runtime.audioEnabled ? '1' : '0'); } catch (error) { void error; }
+        refreshButton();
+        if (Crown.Runtime.audioEnabled) play('click');
+      }
+
+      function init() {
+        try {
+          const saved = localStorage.getItem(PREF_KEY);
+          if (saved !== null) Crown.Runtime.audioEnabled = saved === '1';
+        } catch (error) { void error; }
+        refreshButton();
+        toggleButton.addEventListener('click', toggle);
+        const unlock = () => ensureContext();
+        window.addEventListener('pointerdown', unlock, { once: true });
+        window.addEventListener('keydown', unlock, { once: true });
+      }
+
+      return Object.freeze({ init, play, playSeason, toggle });
+    })();
+
+    // ========================================
+    // 11. 季節演出
+    // ========================================
+    Crown.Seasons = (() => {
+      function resetSnow() {
+        const random = Crown.Util.createSeededRandom(Crown.State.world.seed ^ Crown.State.time.totalDays ^ 0x5A0F1234);
+        const count = Math.min(120, Math.max(45, Math.floor(Crown.Runtime.canvasCssWidth / 12)));
+        Crown.Runtime.snowParticles = Array.from({ length: count }, () => ({
+          x: random() * Crown.Runtime.canvasCssWidth,
+          y: random() * Crown.Runtime.canvasCssHeight,
+          speed: 18 + random() * 32,
+          drift: -5 + random() * 10,
+          size: random() > 0.72 ? 3 : 2
+        }));
+      }
+
+      function onSeasonChanged(seasonKey) {
+        Crown.Render.invalidateAll();
+        if (seasonKey === 'winter') {
+          Crown.Runtime.seasonResumeSpeed = Crown.State.time.speed;
+          Crown.Commands.setSpeed(0);
+          Crown.UI.showSeasonBanner('winter', true);
+          resetSnow();
+        } else {
+          Crown.UI.showSeasonBanner(seasonKey, false);
+          Crown.Runtime.snowParticles = [];
+        }
+        if (Crown.Audio?.playSeason) Crown.Audio.playSeason(seasonKey);
+      }
+
+      function update(deltaMs) {
+        const seasonKey = Crown.Util.seasonKeyForMonth(Crown.State.time.month);
+        if (document.body) document.body.dataset.season = seasonKey;
+        if (Crown.Runtime.lastSeasonKey === null) {
+          Crown.Runtime.lastSeasonKey = seasonKey;
+          if (seasonKey === 'winter') onSeasonChanged(seasonKey);
+        } else if (seasonKey !== Crown.Runtime.lastSeasonKey) {
+          Crown.Runtime.lastSeasonKey = seasonKey;
+          onSeasonChanged(seasonKey);
+        }
+
+        if (seasonKey !== 'winter') return;
+        if (Crown.Runtime.snowParticles.length === 0) resetSnow();
+        const seconds = Math.min(deltaMs, 100) / 1000;
+        for (const snow of Crown.Runtime.snowParticles) {
+          snow.x += snow.drift * seconds;
+          snow.y += snow.speed * seconds;
+          if (snow.y > Crown.Runtime.canvasCssHeight + 4) {
+            snow.y = -4;
+            snow.x = (snow.x + Crown.Runtime.canvasCssWidth * 0.37) % Crown.Runtime.canvasCssWidth;
+          }
+          if (snow.x < -4) snow.x = Crown.Runtime.canvasCssWidth + 4;
+          if (snow.x > Crown.Runtime.canvasCssWidth + 4) snow.x = -4;
+        }
+      }
+
+      function drawWeather(context, width, height) {
+        void width;
+        void height;
+        if (Crown.Util.seasonKeyForMonth(Crown.State.time.month) !== 'winter') return;
+        context.fillStyle = '#eef9fbcc';
+        for (const snow of Crown.Runtime.snowParticles) {
+          context.fillRect(Math.round(snow.x), Math.round(snow.y), snow.size, snow.size);
+        }
+      }
+
+      function dismissBanner() {
+        Crown.UI.hideSeasonBanner();
+        if (Crown.State.status.phase === 'playing') Crown.Commands.setSpeed(Crown.Runtime.seasonResumeSpeed);
+        Crown.Render.canvas.focus();
+      }
+
+      return Object.freeze({ update, drawWeather, dismissBanner });
+    })();
+
+    // ========================================
+    // 12. 初回チュートリアル
+    // ========================================
+    Crown.Tutorial = (() => {
+      const SEEN_KEY = `${Crown.Config.STORAGE_KEY}-tutorial-seen-v1`;
+      const elements = {
+        overlay: document.getElementById('tutorial-overlay'),
+        title: document.getElementById('tutorial-title'),
+        text: document.getElementById('tutorial-text'),
+        progress: document.getElementById('tutorial-progress'),
+        back: document.getElementById('tutorial-back'),
+        next: document.getElementById('tutorial-next'),
+        skip: document.getElementById('tutorial-skip'),
+        open: document.getElementById('tutorial-open')
+      };
+      const steps = Object.freeze([
+        Object.freeze({
+          targetId: 'calendar',
+          title: '目標は「最初の冬を越す」',
+          html: `<p>開拓地には食料と燃料の備蓄がありますが、何も建てずに時間を進めると不足します。</p><div class='tutorial-note'>まずは1年目の冬を生き残ることだけを考えれば大丈夫です。外交や戦争はまだありません。</div>`
+        }),
+        Object.freeze({
+          targetId: 'canvas-wrap',
+          title: 'マップの見方と移動',
+          html: `<ul><li>右ドラッグまたは中ドラッグ：マップ移動</li><li>マウスホイール：カーソル位置を中心に1〜4倍ズーム</li><li>4倍ズーム：住居・井戸・生産施設・資材置き場を行き来する住民が現れます</li><li>住民の背中の荷物は素材ごとに色が変わります</li><li>青いタイル：水辺。現在は建設できません</li></ul><p>最初から中央に短い未舗装路が敷かれています。ここを開拓の中心にします。</p>`
+        }),
+        Object.freeze({
+          targetId: 'tool-list',
+          toolId: 'road',
+          title: '最初に道路を伸ばす',
+          html: `<p>生産施設は、道路の上下左右に隣接していないと働きません。中央の道路から、押したまま横へドラッグして離してください。</p><div class='tutorial-note'>黄色が敷設予定、赤が停止位置です。道路は1タイルにつき木材1で、既存道路は無料で通過します。</div>`
+        }),
+        Object.freeze({
+          targetId: 'facility-guide',
+          toolId: 'forager',
+          title: '施設ガイドを確認する',
+          html: `<p>建設道具へカーソルを合わせると大きな説明が表示され、選択後は左側の施設ガイドへ残ります。</p><p><b>効果あり</b>は現在の計算へ反映されます。<b>効果準備中</b>の資材置き場は、今は配置しても冬越しを助けません。</p>`
+        }),
+        Object.freeze({
+          targetId: 'canvas-wrap',
+          toolId: 'inspect',
+          title: '調査で施設の中身を見る',
+          html: `<p>調査を選び、住宅や施設へカーソルを合わせると左上に詳細カードが出ます。</p><div class='tutorial-note'>入居者、配属労働者、現在向かっている表示住民、労働・原料別の稼働率、実生産量、停止理由を確認できます。</div>`
+        }),
+        Object.freeze({
+          targetId: 'rightbar',
+          toolId: 'inspect',
+          title: '人口は働く人と扶養人口に分かれる',
+          html: `<p>現在は総人口の60%を労働可能人口として集団管理し、施設の優先度順に自動配属します。</p><div class='tutorial-note'>井戸・燃料・食料が優先されます。施設を建てすぎると低優先施設の人手が不足し、生産量が下がります。冬は畑と採集の必要人数が減り、他施設へ再配属されます。</div>`
+        }),
+        Object.freeze({
+          targetId: 'rightbar',
+          toolId: 'field',
+          title: '素材を加工して食料を作る',
+          html: `<p>畑の穀物を製粉所で小麦粉にし、パン焼き窯で食料へ加工できます。</p><div class='tutorial-note'>畑は平原、採石場と鉱山は丘陵限定です。右側の素材在庫と調査カードで流れを追えます。</div>`
+        }),
+        Object.freeze({
+          targetId: 'facility-guide',
+          toolId: 'forager',
+          title: '食料は採集所3棟が目安',
+          html: `<p>採集所は季節ごとに食料を日次生産します。冬は生産が大きく落ちるため、春から備蓄します。</p><div class='tutorial-note'>最初の冬までに採集所3棟を、道路のすぐ上か下へ配置してください。</div>`
+        }),
+        Object.freeze({
+          targetId: 'rightbar',
+          toolId: 'woodcutter',
+          title: '燃料と冬季予測を見る',
+          html: `<p>木こり小屋は毎日、木材+4・燃料+18を生産します。最初は1棟が目安です。</p><p>冬になると雪景色と降雪へ変わり、時間が自動停止します。右側の冬季予測が「高」なら施設を追加してください。</p>`
+        }),
+        Object.freeze({
+          targetId: 'facility-guide',
+          toolId: 'housing',
+          title: '井戸と住宅区画で町を育てる',
+          html: `<p>道路接続された井戸を1棟建て、道路沿いへ住宅区画を指定します。人口が住宅容量の75%以上なら、1区画ずつ10日かけて仮設住宅になります。</p><div class='tutorial-note'>上部の「住宅 84/100」は人口/住宅容量です。区画へカーソルを合わせると、建設進捗や足りない条件を確認できます。</div>`
+        }),
+        Object.freeze({
+          targetId: 'speed-controls',
+          title: 'おすすめの最初の配置',
+          html: `<p>道路の上下へ施設と住宅区画を並べると、すべて接続されます。</p><div class='tutorial-layout'>採　採　採　木<br>道─道─道─道─道<br>井　住　住　住</div><p>採＝採集所、木＝木こり小屋、住＝住宅区画です。</p><div class='tutorial-note'>配置後に1倍速で進め、冬季予測と今日の収支を確認しましょう。Spaceで一時停止、Escでいつでも調査へ戻れます。</div>`
+        })
+      ]);
+      let currentStep = 0;
+      let previousSpeed = 1;
+      let focusedElement = null;
+
+      function setSeen() {
+        try { localStorage.setItem(SEEN_KEY, '1'); } catch (error) { console.warn('チュートリアル状態を保存できません', error); }
+      }
+
+      function wasSeen() {
+        try { return localStorage.getItem(SEEN_KEY) === '1'; } catch (error) { return false; }
+      }
+
+      function render() {
+        const step = steps[currentStep];
+        if (focusedElement) focusedElement.classList.remove('tutorial-focus');
+        focusedElement = document.getElementById(step.targetId);
+        if (focusedElement) focusedElement.classList.add('tutorial-focus');
+        if (step.toolId) Crown.UI.selectTool(step.toolId);
+        elements.title.textContent = step.title;
+        elements.text.innerHTML = step.html;
+        elements.progress.textContent = `${currentStep + 1} / ${steps.length}`;
+        elements.back.disabled = currentStep === 0;
+        elements.next.textContent = currentStep === steps.length - 1 ? '開拓を始める' : '次へ';
+      }
+
+      function open() {
+        currentStep = 0;
+        previousSpeed = Crown.State.time.speed;
+        Crown.Commands.setSpeed(0);
+        elements.overlay.hidden = false;
+        render();
+        elements.next.focus();
+      }
+
+      function close() {
+        setSeen();
+        elements.overlay.hidden = true;
+        if (focusedElement) focusedElement.classList.remove('tutorial-focus');
+        focusedElement = null;
+        if (Crown.State.status.phase === 'playing') Crown.Commands.setSpeed(previousSpeed);
+        Crown.Render.canvas.focus();
+      }
+
+      function next() {
+        if (currentStep >= steps.length - 1) {
+          close();
+          return;
+        }
+        currentStep += 1;
+        render();
+      }
+
+      function back() {
+        if (currentStep <= 0) return;
+        currentStep -= 1;
+        render();
+      }
+
+      function init() {
+        elements.open.addEventListener('click', open);
+        elements.next.addEventListener('click', next);
+        elements.back.addEventListener('click', back);
+        elements.skip.addEventListener('click', close);
+        window.addEventListener('keydown', (event) => {
+          if (event.key === 'Escape' && !elements.overlay.hidden) {
+            event.preventDefault();
+            close();
+          } else if ((event.key === '?' || event.key.toLowerCase() === 'h') && elements.overlay.hidden) {
+            event.preventDefault();
+            open();
+          }
+        });
+        if (!wasSeen()) open();
+      }
+
+      return Object.freeze({ init, open, close, next, back });
+    })();
+
+    // ========================================
+    // 13. セーブ（Runtimeは含めない）
+    // ========================================
+    Crown.Persistence = (() => {
+      function createPayload() {
+        return {
+          saveVersion: Crown.Config.SAVE_VERSION,
+          gameVersion: Crown.Config.GAME_VERSION,
+          createdAt: new Date().toISOString(),
+          state: Crown.Util.deepClone(Crown.State)
+        };
+      }
+
+      function validatePayload(payload) {
+        if (!payload || typeof payload !== 'object') throw new Error('セーブデータの形式が不正です');
+        if (payload.saveVersion !== Crown.Config.SAVE_VERSION) throw new Error(`未対応のセーブ版です: ${payload.saveVersion}`);
+        if (!payload.state?.world || !payload.state?.time || !Array.isArray(payload.state?.cities)) throw new Error('必要な状態がありません');
+        const expectedTiles = payload.state.world.width * payload.state.world.height;
+        if (payload.state.world.terrain?.length !== expectedTiles) throw new Error('地形データが破損しています');
+        if (payload.state.world.roads?.length !== expectedTiles) throw new Error('道路データが破損しています');
+        if (payload.state.world.buildings?.length !== expectedTiles) throw new Error('建物データが破損しています');
+        if (payload.state.world.zones && payload.state.world.zones.length !== expectedTiles) throw new Error('住宅区画データが破損しています');
+        if (payload.state.world.zoneProgress && payload.state.world.zoneProgress.length !== expectedTiles) throw new Error('住宅建設進捗データが破損しています');
+        if (payload.state.world.workersAssigned && payload.state.world.workersAssigned.length !== expectedTiles) throw new Error('労働者配属データが破損しています');
+        return true;
+      }
+
+      function normalizeState(state) {
+        const tileCount = state.world.width * state.world.height;
+        if (!Array.isArray(state.world.zones)) state.world.zones = new Array(tileCount).fill(0);
+        if (!Array.isArray(state.world.zoneProgress)) state.world.zoneProgress = new Array(tileCount).fill(0);
+        if (!Array.isArray(state.world.workersAssigned)) state.world.workersAssigned = new Array(tileCount).fill(0);
+        for (const city of state.cities) {
+          city.baseHousingCapacity ??= Crown.Config.BASE_HOUSING_CAPACITY;
+          for (const resource of ['grain', 'flour', 'stone', 'ore', 'tools']) city.resources[resource] ??= 0;
+          city.economy.lastDaily ??= {
+            production: { food: 0, fuel: 0, wood: 0, grain: 0, flour: 0, stone: 0, ore: 0, tools: 0 },
+            consumption: { food: 0, fuel: 0, grain: 0, flour: 0, ore: 0 },
+            shortage: { food: 0, fuel: 0 },
+            connectedBuildings: 0
+          };
+          city.economy.lastDaily.overflow ??= {};
+          city.economy.lastMonth ??= { births: 0, deaths: 0, tax: 0, houseGrown: false, housingCapacity: city.baseHousingCapacity };
+          city.labor ??= {
+            workforceRatioPermille: Crown.Config.WORKFORCE_RATIO_PERMILLE,
+            workingAge: Math.floor(city.population * Crown.Config.WORKFORCE_RATIO_PERMILLE / 1000),
+            employed: 0,
+            unemployed: Math.floor(city.population * Crown.Config.WORKFORCE_RATIO_PERMILLE / 1000),
+            dependents: city.population - Math.floor(city.population * Crown.Config.WORKFORCE_RATIO_PERMILLE / 1000),
+            requiredJobs: 0
+          };
+          city.labor.workforceRatioPermille ??= Crown.Config.WORKFORCE_RATIO_PERMILLE;
+          city.storage ??= {};
+          city.storage.baseCapacity ??= Crown.Util.deepClone(Crown.Config.BASE_STORAGE_CAPACITY);
+          for (const [resource, amount] of Object.entries(Crown.Config.BASE_STORAGE_CAPACITY)) {
+            city.storage.baseCapacity[resource] ??= amount;
+          }
+          city.storage.capacity ??= Crown.Util.deepClone(city.storage.baseCapacity);
+          city.storage.lastOverflow ??= {};
+          city.storage.lastOverflowDay ??= null;
+          city.storage.totalOverflow ??= {};
+        }
+        state.statistics.zonesPlaced ??= state.world.zones.filter(Boolean).length;
+        state.statistics.housesGrown ??= state.world.buildings.filter((id) => id === 'shelter').length;
+        return state;
+      }
+
+      function applyPayload(payload) {
+        validatePayload(payload);
+        Crown.State = normalizeState(Crown.Util.deepClone(payload.state));
+        Crown.Simulation.assignWorkers(Crown.State);
+        Crown.Simulation.enforceStorageLimits(Crown.State);
+        Crown.Runtime.pathCache.clear();
+        Crown.Runtime.gameDayAccumulator = 0;
+        Crown.Runtime.forecastCacheKey = '';
+        Crown.Runtime.peopleDirty = true;
+        Crown.Runtime.lastSeasonKey = null;
+        Crown.Runtime.snowParticles = [];
+        Crown.Runtime.observedBuildingsPlaced = -1;
+        Crown.Runtime.observedZonesPlaced = -1;
+        Crown.Runtime.observedHousesGrown = -1;
+        Crown.Runtime.observedOverflowTotal = -1;
+        Crown.Render.invalidateAll();
+      }
+
+      function saveLocal() {
+        localStorage.setItem(Crown.Config.STORAGE_KEY, JSON.stringify(createPayload()));
+      }
+
+      function loadLocal() {
+        const text = localStorage.getItem(Crown.Config.STORAGE_KEY);
+        if (!text) throw new Error('保存データがありません');
+        applyPayload(JSON.parse(text));
+      }
+
+      function exportJson() {
+        const blob = new Blob([JSON.stringify(createPayload(), null, 2)], { type: 'application/json' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `frontier-crown-y${Crown.State.time.year}-m${Crown.State.time.month}.json`;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(link.href), 0);
+      }
+
+      async function importFile(file) {
+        const text = await file.text();
+        applyPayload(JSON.parse(text));
+      }
+
+      function bindEvents() {
+        document.getElementById('save-local').addEventListener('click', () => {
+          try { saveLocal(); Crown.UI.showToast('ブラウザ内へ保存しました'); }
+          catch (error) { Crown.UI.showToast(error.message, true); }
+        });
+        document.getElementById('load-local').addEventListener('click', () => {
+          try { loadLocal(); Crown.UI.showToast('保存データを読み込みました'); }
+          catch (error) { Crown.UI.showToast(error.message, true); }
+        });
+        document.getElementById('export-json').addEventListener('click', () => {
+          try { exportJson(); Crown.UI.showToast('JSONを書き出しました'); }
+          catch (error) { Crown.UI.showToast(error.message, true); }
+        });
+        const input = document.getElementById('import-file');
+        document.getElementById('import-json').addEventListener('click', () => input.click());
+        input.addEventListener('change', async () => {
+          if (!input.files?.[0]) return;
+          try { await importFile(input.files[0]); Crown.UI.showToast('JSONを読み込みました'); }
+          catch (error) { Crown.UI.showToast(error.message, true); }
+          finally { input.value = ''; }
+        });
+      }
+
+      return Object.freeze({ createPayload, validatePayload, normalizeState, applyPayload, saveLocal, loadLocal, exportJson, importFile, bindEvents });
+    })();
+
+    // ========================================
+    // 14. デバッグ・無描画高速進行
+    // ========================================
+    Crown.Debug = (() => {
+      function simulateYears(years, sourceState = Crown.State) {
+        const simulationState = Crown.Util.deepClone(sourceState);
+        const days = Math.max(0, Math.floor(years * Crown.Config.MONTHS_PER_YEAR * Crown.Config.DAYS_PER_MONTH));
+        const before = Crown.Util.deepClone(simulationState.cities[0].resources);
+        for (let day = 0; day < days; day += 1) Crown.Simulation.advanceDay(simulationState);
+        return {
+          yearsSimulated: years,
+          dailyUpdates: simulationState.statistics.dailyUpdates - sourceState.statistics.dailyUpdates,
+          monthlyUpdates: simulationState.statistics.monthlyUpdates - sourceState.statistics.monthlyUpdates,
+          startResources: before,
+          endResources: Crown.Util.deepClone(simulationState.cities[0].resources),
+          finalPopulation: simulationState.cities[0].population,
+          totalDeaths: simulationState.statistics.totalDeaths,
+          status: Crown.Util.deepClone(simulationState.status),
+          finalDate: Crown.Util.deepClone(simulationState.time)
+        };
+      }
+
+      function runSelfTests() {
+        const payload = Crown.Persistence.createPayload();
+        Crown.Persistence.validatePayload(payload);
+        const runtimeLeaked = JSON.stringify(payload).includes('terrainCanvas') || JSON.stringify(payload).includes('pathCache');
+        console.assert(!runtimeLeaked, 'Runtimeデータがセーブへ混入しています');
+        const testState = Crown.StateFactory.create(12345);
+        const report = simulateYears(20, testState);
+        console.assert(report.dailyUpdates === 7200, '20年の日次更新回数が不正です', report);
+        console.assert(report.monthlyUpdates === 240, '20年の月末更新回数が不正です', report);
+        console.assert(Object.values(report.endResources).every((value) => Number.isInteger(value) && value >= 0), '資源値が整数または非負ではありません', report);
+
+        const connectedState = Crown.StateFactory.create(12345);
+        const centerX = Math.floor(connectedState.world.width / 2);
+        const centerY = Math.floor(connectedState.world.height / 2);
+        connectedState.world.buildings[Crown.Util.tileIndex(centerX - 1, centerY - 1, connectedState.world.width)] = 'forager';
+        connectedState.world.buildings[Crown.Util.tileIndex(centerX, centerY - 1, connectedState.world.width)] = 'woodcutter';
+        const daily = Crown.Simulation.getDailySummary(connectedState, 'spring');
+        console.assert(daily.production.food === 28 && daily.production.fuel === 18 && daily.production.wood === 4, '接続施設の日次生産が不正です', daily);
+        console.assert(daily.connectedBuildings === 2, '道路接続判定が不正です', daily);
+        const roadPath = Crown.Commands.createRoadPath({ x: 2, y: 3 }, { x: 7, y: 5 });
+        console.assert(roadPath.length === 8, '道路ドラッグ経路の長さが不正です', roadPath);
+
+        const laborState = Crown.StateFactory.create(13579);
+        laborState.cities[0].population = 10;
+        laborState.world.buildings[Crown.Util.tileIndex(centerX, centerY - 1, laborState.world.width)] = 'woodcutter';
+        Crown.Simulation.advanceDay(laborState);
+        const laborDaily = laborState.cities[0].economy.lastDaily;
+        console.assert(laborState.cities[0].labor.workingAge === 6 && laborState.cities[0].labor.employed === 6, '労働人口の集団計算が不正です', laborState.cities[0].labor);
+        console.assert(laborDaily.production.wood === 3 && laborDaily.production.fuel === 13, '労働者75%時の生産補正が不正です', laborDaily);
+
+        const priorityState = Crown.StateFactory.create(13580);
+        priorityState.cities[0].population = 17;
+        const priorityWell = Crown.Util.tileIndex(centerX - 1, centerY - 1, priorityState.world.width);
+        const priorityWood = Crown.Util.tileIndex(centerX, centerY - 1, priorityState.world.width);
+        const priorityField = Crown.Util.tileIndex(centerX + 1, centerY - 1, priorityState.world.width);
+        priorityState.world.buildings[priorityWell] = 'well';
+        priorityState.world.buildings[priorityWood] = 'woodcutter';
+        priorityState.world.buildings[priorityField] = 'field';
+        const priorityPlan = Crown.Simulation.assignWorkers(priorityState, 'spring');
+        console.assert(priorityPlan.assignments[priorityWell] === 2 && priorityPlan.assignments[priorityWood] === 8 && priorityPlan.assignments[priorityField] === 0, '施設優先度順に労働者が配属されません', priorityPlan);
+
+        const winterLaborState = Crown.StateFactory.create(13581);
+        winterLaborState.cities[0].population = 20;
+        const winterField = Crown.Util.tileIndex(centerX, centerY - 1, winterLaborState.world.width);
+        const winterQuarry = Crown.Util.tileIndex(centerX + 1, centerY - 1, winterLaborState.world.width);
+        winterLaborState.world.buildings[winterField] = 'field';
+        winterLaborState.world.buildings[winterQuarry] = 'quarry';
+        const springLaborPlan = Crown.Simulation.buildLaborPlan(winterLaborState, 'spring');
+        const winterLaborPlan = Crown.Simulation.buildLaborPlan(winterLaborState, 'winter');
+        console.assert(springLaborPlan.assignments[winterField] === 6 && springLaborPlan.assignments[winterQuarry] === 6, '春の労働配分が不正です', springLaborPlan);
+        console.assert(winterLaborPlan.assignments[winterField] === 1 && winterLaborPlan.assignments[winterQuarry] === 8 && winterLaborPlan.unemployed === 3, '冬に農業労働者が他施設へ再配分されません', winterLaborPlan);
+
+        const productionChainState = Crown.StateFactory.create(54321);
+        const chainX = Math.floor(productionChainState.world.width / 2);
+        const chainY = Math.floor(productionChainState.world.height / 2);
+        productionChainState.world.buildings[Crown.Util.tileIndex(chainX - 1, chainY - 1, productionChainState.world.width)] = 'field';
+        productionChainState.world.buildings[Crown.Util.tileIndex(chainX, chainY - 1, productionChainState.world.width)] = 'mill';
+        productionChainState.world.buildings[Crown.Util.tileIndex(chainX + 1, chainY - 1, productionChainState.world.width)] = 'bakery';
+        Crown.Simulation.advanceDay(productionChainState);
+        const chainDaily = productionChainState.cities[0].economy.lastDaily;
+        console.assert(chainDaily.production.grain === 20 && chainDaily.production.flour === 9 && chainDaily.production.food === 28, '穀物から食料への生産連鎖が不正です', chainDaily);
+        console.assert(chainDaily.consumption.grain === 12 && chainDaily.consumption.flour === 8, '加工施設の原料消費が不正です', chainDaily);
+        productionChainState.world.buildings[Crown.Util.tileIndex(chainX - 3, chainY - 1, productionChainState.world.width)] = 'quarry';
+        productionChainState.world.buildings[Crown.Util.tileIndex(chainX - 2, chainY - 1, productionChainState.world.width)] = 'mine';
+        productionChainState.world.buildings[Crown.Util.tileIndex(chainX + 2, chainY - 1, productionChainState.world.width)] = 'smithy';
+        for (let day = 1; day < 360; day += 1) Crown.Simulation.advanceDay(productionChainState);
+        const chainResources = productionChainState.cities[0].resources;
+        console.assert(chainResources.stone > 80 && chainResources.ore > 20 && chainResources.tools > 10, '石材・鉱石・道具の生産連鎖が進みません', chainResources);
+        console.assert(Object.values(chainResources).every((value) => Number.isInteger(value) && value >= 0), '生産連鎖の長期進行で資源値が壊れました', chainResources);
+
+        const stoppedMillState = Crown.StateFactory.create(54322);
+        stoppedMillState.cities[0].resources.grain = 0;
+        stoppedMillState.world.buildings[Crown.Util.tileIndex(chainX, chainY - 1, stoppedMillState.world.width)] = 'mill';
+        const stoppedMillIndex = Crown.Util.tileIndex(chainX, chainY - 1, stoppedMillState.world.width);
+        const stoppedMill = Crown.Simulation.getFacilityStatus(stoppedMillState, stoppedMillIndex);
+        console.assert(!stoppedMill.operating && stoppedMill.status.includes('穀物'), '原料不足の施設状態が表示されません', stoppedMill);
+
+        const storageState = Crown.StateFactory.create(65431);
+        const storageCity = storageState.cities[0];
+        const baseStorage = Crown.Simulation.getStorageCapacity(storageState);
+        console.assert(baseStorage.food === 15000 && baseStorage.wood === 800 && baseStorage.tools === 100, '都市の基礎保管容量が不正です', baseStorage);
+        storageCity.resources.food = baseStorage.food + 25;
+        const baseOverflow = Crown.Simulation.enforceStorageLimits(storageState);
+        console.assert(storageCity.resources.food === baseStorage.food && baseOverflow.food === 25, '容量超過分が廃棄されません', { baseOverflow, storageCity });
+        const storageIndex = Crown.Util.tileIndex(centerX, centerY - 1, storageState.world.width);
+        storageState.world.buildings[storageIndex] = 'stockpile';
+        Crown.Simulation.assignWorkers(storageState);
+        const expandedStorage = Crown.Simulation.getStorageCapacity(storageState);
+        console.assert(expandedStorage.food === 20000 && expandedStorage.wood === 1800 && expandedStorage.tools === 400, '資材置き場の保管容量が加算されません', expandedStorage);
+        const storageContribution = Crown.Simulation.getStorageContribution(storageState, storageIndex);
+        console.assert(storageContribution.actual.food === 5000 && storageState.world.workersAssigned[storageIndex] === 4, '資材置き場の労働者と容量寄与が連動していません', storageContribution);
+
+        const partialStorageState = Crown.StateFactory.create(65432);
+        partialStorageState.cities[0].population = 4;
+        const partialStorageIndex = Crown.Util.tileIndex(centerX, centerY - 1, partialStorageState.world.width);
+        partialStorageState.world.buildings[partialStorageIndex] = 'stockpile';
+        Crown.Simulation.assignWorkers(partialStorageState);
+        const partialStorage = Crown.Simulation.getStorageCapacity(partialStorageState);
+        console.assert(partialStorage.food === 17500 && partialStorage.wood === 1300, '労働者50%時の保管容量補正が不正です', partialStorage);
+        partialStorageState.world.roads.fill(0);
+        Crown.Simulation.assignWorkers(partialStorageState);
+        const disconnectedStorage = Crown.Simulation.getStorageCapacity(partialStorageState);
+        console.assert(disconnectedStorage.food === 15000 && disconnectedStorage.wood === 800, '道路未接続の資材置き場が容量を増やしています', disconnectedStorage);
+
+        const legacyStorageState = Crown.StateFactory.create(65433);
+        delete legacyStorageState.cities[0].storage;
+        delete legacyStorageState.cities[0].economy.lastDaily.overflow;
+        Crown.Persistence.normalizeState(legacyStorageState);
+        console.assert(legacyStorageState.cities[0].storage.capacity.food === 15000 && legacyStorageState.cities[0].economy.lastDaily.overflow, '旧セーブへ保管状態を補完できません', legacyStorageState.cities[0]);
+
+        const survivalState = Crown.StateFactory.create(24680);
+        const survivalCenterX = Math.floor(survivalState.world.width / 2);
+        const survivalCenterY = Math.floor(survivalState.world.height / 2);
+        for (let offset = -2; offset <= 0; offset += 1) {
+          survivalState.world.buildings[Crown.Util.tileIndex(survivalCenterX + offset, survivalCenterY - 1, survivalState.world.width)] = 'forager';
+        }
+        survivalState.world.buildings[Crown.Util.tileIndex(survivalCenterX + 1, survivalCenterY - 1, survivalState.world.width)] = 'woodcutter';
+        const survivalReport = simulateYears(1, survivalState);
+        console.assert(survivalReport.finalPopulation > 0, '基本施設を建てても最初の冬を越せません', survivalReport);
+
+        const housingState = Crown.StateFactory.create(11223);
+        const housingCenterX = Math.floor(housingState.world.width / 2);
+        const housingCenterY = Math.floor(housingState.world.height / 2);
+        housingState.world.buildings[Crown.Util.tileIndex(housingCenterX - 1, housingCenterY - 1, housingState.world.width)] = 'well';
+        const housingIndex = Crown.Util.tileIndex(housingCenterX, housingCenterY - 1, housingState.world.width);
+        housingState.world.zones[housingIndex] = 1;
+        for (let day = 0; day < 5; day += 1) Crown.Simulation.advanceDay(housingState);
+        console.assert(housingState.world.zoneProgress[housingIndex] === 5, '住宅の建設進捗が日次で増えていません', housingState);
+        for (let day = 0; day < 5; day += 1) Crown.Simulation.advanceDay(housingState);
+        console.assert(housingState.world.buildings.includes('shelter'), '井戸と住宅区画があっても仮設住宅が成長しません', housingState);
+        console.assert(Crown.Simulation.getHousingCapacity(housingState) === 116, '仮設住宅の容量が不正です', housingState);
+
+        const housingWithoutWell = Crown.StateFactory.create(11224);
+        const noWellIndex = Crown.Util.tileIndex(
+          Math.floor(housingWithoutWell.world.width / 2),
+          Math.floor(housingWithoutWell.world.height / 2) - 1,
+          housingWithoutWell.world.width
+        );
+        housingWithoutWell.world.zones[noWellIndex] = 1;
+        const noWellStatus = Crown.Simulation.getResidentialStatus(housingWithoutWell, noWellIndex);
+        console.assert(!noWellStatus.active && noWellStatus.reason.includes('井戸'), '住宅が建たない理由に井戸不足が出ません', noWellStatus);
+        console.info('[辺境の冠] self-test passed', report);
+        return report;
+      }
+
+      return Object.freeze({ simulateYears, runSelfTests });
+    })();
+
+    // ========================================
+    // 15. 起動・固定ステップループ
+    // ========================================
+    Crown.App = (() => {
+      function frame(now) {
+        const rawDelta = now - Crown.Runtime.lastFrameTime;
+        const delta = Math.min(Math.max(rawDelta, 0), 1000);
+        Crown.Runtime.lastFrameTime = now;
+        Crown.Runtime.accumulatorMs += delta;
+        Crown.Runtime.stepsThisFrame = 0;
+
+        while (
+          Crown.Runtime.accumulatorMs >= Crown.Config.SIM_STEP_MS &&
+          Crown.Runtime.stepsThisFrame < Crown.Config.MAX_SIM_STEPS_PER_FRAME
+        ) {
+          Crown.Simulation.updateFixed(Crown.Config.SIM_STEP_MS);
+          Crown.Runtime.accumulatorMs -= Crown.Config.SIM_STEP_MS;
+          Crown.Runtime.stepsThisFrame += 1;
+        }
+
+        if (Crown.Runtime.stepsThisFrame >= Crown.Config.MAX_SIM_STEPS_PER_FRAME) {
+          Crown.Runtime.accumulatorMs = 0;
+        }
+
+        Crown.Runtime.fpsFrames += 1;
+        Crown.Runtime.fpsElapsedMs += delta;
+        if (Crown.Runtime.fpsElapsedMs >= 500) {
+          Crown.Runtime.fps = Crown.Runtime.fpsFrames * 1000 / Crown.Runtime.fpsElapsedMs;
+          Crown.Runtime.fpsFrames = 0;
+          Crown.Runtime.fpsElapsedMs = 0;
+        }
+
+        Crown.Seasons.update(delta);
+        Crown.People.update(delta);
+        Crown.Render.draw();
+        Crown.UI.update(delta);
+        requestAnimationFrame(frame);
+      }
+
+      function start() {
+        Crown.UI.buildToolButtons();
+        Crown.UI.bindEvents();
+        Crown.Persistence.bindEvents();
+        Crown.UI.selectTool('inspect');
+        Crown.Render.resize();
+        Crown.Debug.runSelfTests();
+        Crown.Audio.init();
+        Crown.Tutorial.init();
+        Crown.Runtime.lastFrameTime = performance.now();
+        requestAnimationFrame(frame);
+      }
+
+      return Object.freeze({ start });
+    })();
+
+    Crown.App.start();
+  </script>
+</body>
+</html>
