@@ -4,12 +4,17 @@ on:
   push:
     branches:
       - agent/phase2-logistics
+  pull_request:
+    branches:
+      - agent/touch-trackpad
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: write
 
 jobs:
   assemble:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
