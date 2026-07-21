@@ -19,7 +19,7 @@ jobs:
           ref: agent/phase2-logistics
           fetch-depth: 0
 
-      - name: Recover split Base64 payload
+      - name: Locate and recover Base64 corruption
         shell: bash
         run: |
           set -euo pipefail
@@ -28,33 +28,58 @@ jobs:
           import base64
           import gzip
           import string
+          import zlib
 
           files = sorted(Path('.crown-phase2').glob('part-*.b64'))
-          if len(files) != 4:
-              raise SystemExit(f'Expected 4 payload parts, found {len(files)}')
-
           parts = [''.join(p.read_text(encoding='utf-8').split()) for p in files]
           first_group = ''.join(parts[:3])
           tail_group = parts[3]
+          tail_bytes = base64.b64decode(tail_group, validate=True)
+          report = [f'group_chars={len(first_group)}', f'tail_chars={len(tail_group)}']
 
-          if len(first_group) % 4 != 3:
-              raise SystemExit(f'Unexpected first-group length: {len(first_group)}')
+          # Insert a harmless probe character immediately before final padding so
+          # the malformed stream can be decoded far enough to locate the first
+          # DEFLATE failure.
+          padding = len(first_group) - len(first_group.rstrip('='))
+          probe_pos = len(first_group) - padding
+          probe_text = first_group[:probe_pos] + 'A' + first_group[probe_pos:]
+          probe_head = base64.b64decode(probe_text, validate=True)
+          probe_blob = probe_head + tail_bytes
 
-          try:
-              tail_bytes = base64.b64decode(tail_group, validate=True)
-          except Exception as exc:
-              raise SystemExit(f'Unable to decode tail payload: {exc}')
+          inflater = zlib.decompressobj(16 + zlib.MAX_WBITS)
+          fail_offset = None
+          produced = 0
+          for index, byte in enumerate(probe_blob):
+              try:
+                  produced += len(inflater.decompress(bytes([byte])))
+              except zlib.error as exc:
+                  fail_offset = index
+                  report.append(f'probe_error={exc}')
+                  break
+          report.append(f'fail_offset={fail_offset}')
+          report.append(f'produced_before_error={produced}')
+
+          if fail_offset is None:
+              approx = probe_pos
+          else:
+              approx = min(len(first_group), max(0, (fail_offset * 4) // 3))
+          report.append(f'approx_base64_position={approx}')
 
           alphabet = string.ascii_uppercase + string.ascii_lowercase + string.digits + '+/'
-          boundaries = [len(parts[0]), len(parts[0]) + len(parts[1]), len(first_group)]
-          positions = []
-          for pos in boundaries + list(range(len(first_group) + 1)):
-              if pos not in positions:
-                  positions.append(pos)
+          candidate_positions = []
+          for pos in [len(parts[0]), len(parts[0]) + len(parts[1]), probe_pos]:
+              if 0 <= pos <= len(first_group) and pos not in candidate_positions:
+                  candidate_positions.append(pos)
+          for radius in (96, 384, 1536):
+              lo = max(0, approx - radius)
+              hi = min(len(first_group), approx + radius)
+              for pos in range(lo, hi + 1):
+                  if pos not in candidate_positions:
+                      candidate_positions.append(pos)
 
           tested = 0
           result = None
-          for pos in positions:
+          for pos in candidate_positions:
               for char in alphabet:
                   tested += 1
                   candidate_text = first_group[:pos] + char + first_group[pos:]
@@ -63,7 +88,6 @@ jobs:
                       html = gzip.decompress(head_bytes + tail_bytes)
                   except Exception:
                       continue
-
                   if (b'<html' in html.lower()
                           and b'function logisticsStats' in html
                           and b'cartshed:Object.freeze' in html):
@@ -72,29 +96,34 @@ jobs:
               if result:
                   break
 
-          if not result:
-              raise SystemExit(f'No valid repair found after {tested} candidates')
+          report.append(f'tested_candidates={tested}')
+          if result:
+              pos, char, html = result
+              Path('index.html').write_bytes(html)
+              report.extend([
+                  'recovered=true',
+                  f'missing_position={pos}',
+                  f'missing_character={char}',
+                  f'html_bytes={len(html)}',
+              ])
+          else:
+              report.append('recovered=false')
 
-          pos, char, html = result
-          Path('index.html').write_bytes(html)
-          Path('.phase2-diagnostic.txt').write_text(
-              f'recovered=true\nbase64_group=parts-00-through-02\n'
-              f'missing_position={pos}\nmissing_character={char}\n'
-              f'tested_candidates={tested}\nhtml_bytes={len(html)}\n',
-              encoding='utf-8'
-          )
-          print(f'Recovered Phase 2 HTML: position={pos}, char={char}, bytes={len(html)}')
+          Path('.phase2-diagnostic.txt').write_text('\n'.join(report) + '\n', encoding='utf-8')
+          print('\n'.join(report))
           PY
 
-          sed -n '/<script>/,/<\/script>/p' index.html | sed '1d;$d' > /tmp/crown-phase2.js
-          node --check /tmp/crown-phase2.js
+          if grep -q '^recovered=true$' .phase2-diagnostic.txt; then
+            sed -n '/<script>/,/<\/script>/p' index.html | sed '1d;$d' > /tmp/crown-phase2.js
+            node --check /tmp/crown-phase2.js
+          fi
 
-      - name: Commit recovered Phase 2
+      - name: Commit recovery result
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html .phase2-diagnostic.txt
-          git commit -m "recover complete phase 2 game"
+          git commit -m "locate phase 2 payload corruption"
           git push origin HEAD:agent/phase2-logistics
