@@ -19,63 +19,87 @@ jobs:
           ref: agent/phase2-logistics
           fetch-depth: 0
 
-      - name: Locate third corruption
+      - name: Search third corruption
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
           import base64
-          import codecs
+          import heapq
+          import string
           import zlib
 
           files = sorted(Path('.crown-phase2').glob('part-*.b64'))
           parts = [''.join(p.read_text(encoding='utf-8').split()) for p in files]
           damaged = ''.join(parts[:3])
           tail = base64.b64decode(parts[3], validate=True)
+          alphabet = string.ascii_uppercase + string.ascii_lowercase + string.digits + '+/'
 
-          def locate(first_char, second_char):
-              text = damaged[:1334] + first_char + damaged[1334:]
-              text = text[:12695] + second_char + text[12696:]
-              blob = base64.b64decode(text, validate=True) + tail
+          # Best-equivalent repairs found for the first two damaged regions.
+          repaired = damaged[:1334] + 'D' + damaged[1334:]
+          repaired = repaired[:12695] + 'A' + repaired[12696:]
+
+          def score(text):
+              try:
+                  blob = base64.b64decode(text, validate=True) + tail
+              except Exception:
+                  return 0, 0, False
               inflater = zlib.decompressobj(16 + zlib.MAX_WBITS)
-              decoder = codecs.getincrementaldecoder('utf-8')('strict')
-              valid = 0
-              for index, byte in enumerate(blob):
+              output = bytearray()
+              for off in range(0, len(blob), 128):
                   try:
-                      out = inflater.decompress(bytes([byte]))
-                  except zlib.error as exc:
-                      return valid, index, f'zlib:{exc}'
-                  if not out:
-                      continue
-                  try:
-                      decoder.decode(out, final=False)
-                      valid += len(out)
-                  except UnicodeDecodeError as exc:
-                      valid += exc.start
-                      return valid, index, f'utf8:{exc}'
-              return valid, len(blob), 'end'
+                      output.extend(inflater.decompress(blob[off:off + 128]))
+                  except zlib.error:
+                      break
+              try:
+                  output.decode('utf-8')
+                  return len(output), len(output), True
+              except UnicodeDecodeError as exc:
+                  return exc.start, len(output), False
 
-          lines = ['mode=locate-third-corruption']
-          for first_char in 'ABCD':
-              for second_char in 'ABCDEFGHIJKLMNOP':
-                  valid, compressed_break, reason = locate(first_char, second_char)
-                  approx = (compressed_break * 4) // 3
-                  lines.append(
-                      f'first_char={first_char} second_char={second_char} valid_prefix={valid} '
-                      f'compressed_break={compressed_break} approx_base64_position={approx} reason={reason}'
-                  )
+          top = []
+          tested = 0
+          for third_pos in range(21400, 22101):
+              original = repaired[third_pos]
+              if original == '=':
+                  continue
+              for third_char in alphabet:
+                  if third_char == original:
+                      continue
+                  tested += 1
+                  candidate = repaired[:third_pos] + third_char + repaired[third_pos + 1:]
+                  valid_prefix, output_len, utf8_complete = score(candidate)
+                  item = ((valid_prefix, output_len, utf8_complete), third_pos, original, third_char)
+                  if len(top) < 80:
+                      heapq.heappush(top, item)
+                  elif item > top[0]:
+                      heapq.heapreplace(top, item)
+
+          ranked = sorted(top, reverse=True)
+          lines = [
+              'mode=search-third-corruption',
+              'first_repair=insert D at 1334',
+              'second_repair=replace position 12695 with A',
+              'searched_positions=21400-22100',
+              f'tested_candidates={tested}',
+          ]
+          for rank, (candidate_score, pos, original, char) in enumerate(ranked, 1):
+              lines.append(
+                  f'rank{rank}: valid_utf8_prefix={candidate_score[0]} output_bytes={candidate_score[1]} '
+                  f'utf8_complete={candidate_score[2]} third_position={pos} original={original} third_char={char}'
+              )
 
           Path('.phase2-diagnostic.txt').write_text('\n'.join(lines) + '\n', encoding='utf-8')
-          print('\n'.join(lines[:20]))
+          print('\n'.join(lines[:25]))
           PY
 
-      - name: Commit third-corruption location
+      - name: Commit third-corruption search
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .phase2-diagnostic.txt
-          git commit -m "locate third phase 2 corruption"
+          git commit -m "search third phase 2 corruption"
           git push origin HEAD:agent/phase2-logistics
