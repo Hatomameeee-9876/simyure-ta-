@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 jobs:
-  search-third:
+  recover-exact:
     if: github.head_ref == 'agent/phase2-logistics' && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
@@ -19,83 +19,93 @@ jobs:
           ref: agent/phase2-logistics
           fetch-depth: 0
 
-      - name: Search third corruption
+      - name: Exhaustively recover missing Base64 character
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
           import base64
-          import heapq
+          import gzip
           import string
-          import zlib
 
           files = sorted(Path('.crown-phase2').glob('part-*.b64'))
+          if len(files) != 4:
+              raise SystemExit(f'Expected four payload parts, found {len(files)}')
+
           parts = [''.join(p.read_text(encoding='utf-8').split()) for p in files]
-          damaged = ''.join(parts[:3])
-          tail = base64.b64decode(parts[3], validate=True)
+          damaged_part = parts[0]
+          fixed_suffix = parts[1] + parts[2]
+          tail_bytes = base64.b64decode(parts[3], validate=True)
           alphabet = string.ascii_uppercase + string.ascii_lowercase + string.digits + '+/'
 
-          repaired = damaged[:1334] + 'D' + damaged[1334:]
-          repaired = repaired[:12695] + 'A' + repaired[12696:]
-
-          def score(text):
-              blob = base64.b64decode(text, validate=True) + tail
-              inflater = zlib.decompressobj(16 + zlib.MAX_WBITS)
-              output = bytearray()
-              for off in range(0, len(blob), 128):
-                  try:
-                      output.extend(inflater.decompress(blob[off:off + 128]))
-                  except zlib.error:
-                      break
-              try:
-                  output.decode('utf-8')
-                  return len(output), len(output), True
-              except UnicodeDecodeError as exc:
-                  return exc.start, len(output), False
-
-          top = []
           tested = 0
-          for third_pos in range(21400, 22101):
-              original = repaired[third_pos]
-              if original == '=':
-                  continue
-              for third_char in alphabet:
-                  if third_char == original:
-                      continue
+          result = None
+          for position in range(len(damaged_part) + 1):
+              for char in alphabet:
                   tested += 1
-                  candidate = repaired[:third_pos] + third_char + repaired[third_pos + 1:]
-                  result = score(candidate)
-                  item = (result, third_pos, original, third_char)
-                  if len(top) < 80:
-                      heapq.heappush(top, item)
-                  elif item > top[0]:
-                      heapq.heapreplace(top, item)
+                  repaired_group = damaged_part[:position] + char + damaged_part[position:] + fixed_suffix
+                  try:
+                      compressed = base64.b64decode(repaired_group, validate=True) + tail_bytes
+                      html = gzip.decompress(compressed)
+                  except Exception:
+                      continue
 
-          ranked = sorted(top, reverse=True)
+                  try:
+                      text = html.decode('utf-8')
+                  except UnicodeDecodeError:
+                      continue
+
+                  if (text.lstrip().lower().startswith('<!doctype html')
+                          and 'function logisticsStats' in text
+                          and 'cartshed:Object.freeze' in text
+                          and text.rstrip().lower().endswith('</html>')):
+                      result = (position, char, text)
+                      break
+              if result:
+                  break
+              if position % 500 == 0:
+                  print(f'checked position {position}/{len(damaged_part)}')
+
           lines = [
-              'mode=search-third-corruption-v2',
-              'first_repair=insert D at 1334',
-              'second_repair=replace position 12695 with A',
-              'searched_positions=21400-22100',
+              'mode=exhaustive-single-character-recovery',
+              f'damaged_part_chars={len(damaged_part)}',
               f'tested_candidates={tested}',
           ]
-          for rank, (result, pos, original, char) in enumerate(ranked, 1):
-              lines.append(
-                  f'rank{rank}: valid_utf8_prefix={result[0]} output_bytes={result[1]} '
-                  f'utf8_complete={result[2]} third_position={pos} original={original} third_char={char}'
-              )
+          if result is None:
+              lines.append('recovered=false')
+          else:
+              position, char, text = result
+              Path('index.html').write_text(text, encoding='utf-8', newline='')
+              lines.extend([
+                  'recovered=true',
+                  f'missing_position={position}',
+                  f'missing_character={char}',
+                  f'html_chars={len(text)}',
+              ])
 
           Path('.phase2-diagnostic.txt').write_text('\n'.join(lines) + '\n', encoding='utf-8')
-          print('\n'.join(lines[:25]))
+          print('\n'.join(lines))
           PY
 
-      - name: Commit result
+      - name: Validate recovered HTML
         shell: bash
         run: |
           set -euo pipefail
+          grep -q '^recovered=true$' .phase2-diagnostic.txt
+          grep -q "function logisticsStats" index.html
+          grep -q "cartshed:Object.freeze" index.html
+          grep -q "</html>" index.html
+          sed -n '/<script>/,/<\/script>/p' index.html | sed '1d;$d' > /tmp/crown-phase2.js
+          node --check /tmp/crown-phase2.js
+
+      - name: Commit recovered Phase 2
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .crown-phase2 .github/workflows/assemble-phase2-logistics.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .phase2-diagnostic.txt
-          git commit -m "search third phase 2 corruption v2"
+          git add -A
+          git commit -m "recover complete phase 2 game"
           git push origin HEAD:agent/phase2-logistics
