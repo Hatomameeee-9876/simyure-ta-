@@ -19,13 +19,14 @@ jobs:
           ref: agent/phase2-logistics
           fetch-depth: 0
 
-      - name: Rank candidates by valid UTF-8 prefix
+      - name: Search second corruption
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
           import base64
+          import codecs
           import heapq
           import string
           import zlib
@@ -35,70 +36,110 @@ jobs:
           damaged = ''.join(parts[:3])
           tail = base64.b64decode(parts[3], validate=True)
           alphabet = string.ascii_uppercase + string.ascii_lowercase + string.digits + '+/'
+          first_candidates = [
+              (1334, 'A'), (1334, 'B'), (1334, 'C'), (1334, 'D'),
+              (1332, 'x'), (1332, 't'), (1332, 'p'), (1332, 'l'),
+              (1332, 'd'), (1332, 'Z'), (1332, 'V'), (1332, 'N'),
+              (1332, 'J'), (1332, 'F'), (1332, '9'), (1332, '5'),
+          ]
+
+          def build(first_pos, first_char):
+              return damaged[:first_pos] + first_char + damaged[first_pos:]
+
+          def utf8_prefix(text):
+              try:
+                  blob = base64.b64decode(text, validate=True) + tail
+              except Exception:
+                  return 0, 0
+              inflater = zlib.decompressobj(16 + zlib.MAX_WBITS)
+              output = bytearray()
+              for off in range(0, len(blob), 128):
+                  try:
+                      output.extend(inflater.decompress(blob[off:off + 128]))
+                  except zlib.error:
+                      break
+              try:
+                  output.decode('utf-8')
+                  return len(output), len(output)
+              except UnicodeDecodeError as exc:
+                  return exc.start, len(output)
+
+          def locate_utf8_break(text):
+              blob = base64.b64decode(text, validate=True) + tail
+              inflater = zlib.decompressobj(16 + zlib.MAX_WBITS)
+              decoder = codecs.getincrementaldecoder('utf-8')('strict')
+              valid = 0
+              for index, byte in enumerate(blob):
+                  try:
+                      out = inflater.decompress(bytes([byte]))
+                  except zlib.error:
+                      return valid, index
+                  if not out:
+                      continue
+                  try:
+                      decoder.decode(out, final=False)
+                      valid += len(out)
+                  except UnicodeDecodeError as exc:
+                      valid += exc.start
+                      return valid, index
+              return valid, len(blob)
+
+          first_info = []
+          for first_pos, first_char in first_candidates:
+              text = build(first_pos, first_char)
+              valid, compressed_offset = locate_utf8_break(text)
+              approx = min(len(text) - 1, max(0, (compressed_offset * 4) // 3))
+              first_info.append((first_pos, first_char, valid, compressed_offset, approx))
+
           top = []
           tested = 0
-
-          for pos in range(0, 2601):
-              for char in alphabet:
-                  tested += 1
-                  candidate = damaged[:pos] + char + damaged[pos:]
-                  try:
-                      blob = base64.b64decode(candidate, validate=True) + tail
-                  except Exception:
+          for first_pos, first_char, base_valid, compressed_offset, approx in first_info:
+              repaired = build(first_pos, first_char)
+              lo = max(0, approx - 192)
+              hi = min(len(repaired) - 1, approx + 192)
+              for second_pos in range(lo, hi + 1):
+                  original = repaired[second_pos]
+                  if original == '=':
                       continue
-
-                  inflater = zlib.decompressobj(16 + zlib.MAX_WBITS)
-                  output = bytearray()
-                  for off in range(0, len(blob), 128):
-                      try:
-                          output.extend(inflater.decompress(blob[off:off + 128]))
-                      except zlib.error:
-                          break
-
-                  try:
-                      output.decode('utf-8')
-                      valid_prefix = len(output)
-                      utf8_complete = True
-                  except UnicodeDecodeError as exc:
-                      valid_prefix = exc.start
-                      utf8_complete = False
-
-                  source_prefix = 0
-                  text_prefix = output[:valid_prefix].decode('utf-8', errors='ignore')
-                  if text_prefix.lstrip().lower().startswith('<!doctype html'):
-                      source_prefix += 1000000
-                  if '<style>' in text_prefix:
-                      source_prefix += 100000
-                  score = (source_prefix + valid_prefix, valid_prefix, len(output))
-                  item = (score, pos, char, utf8_complete, len(output))
-                  if len(top) < 50:
-                      heapq.heappush(top, item)
-                  elif item > top[0]:
-                      heapq.heapreplace(top, item)
+                  for second_char in alphabet:
+                      if second_char == original:
+                          continue
+                      tested += 1
+                      candidate = repaired[:second_pos] + second_char + repaired[second_pos + 1:]
+                      valid_prefix, output_len = utf8_prefix(candidate)
+                      item = ((valid_prefix, output_len), first_pos, first_char, second_pos, original, second_char, approx)
+                      if len(top) < 50:
+                          heapq.heappush(top, item)
+                      elif item > top[0]:
+                          heapq.heapreplace(top, item)
 
           ranked = sorted(top, reverse=True)
           lines = [
-              'mode=rank-by-utf8-prefix',
-              'grouping=part00+part01+part02 / part03',
-              'searched_positions=0-2600',
+              'mode=search-second-corruption',
               f'tested_candidates={tested}',
           ]
-          for rank, (score, pos, char, complete, output_len) in enumerate(ranked, 1):
+          for first_pos, first_char, valid, compressed_offset, approx in first_info:
               lines.append(
-                  f'rank{rank}: valid_utf8_prefix={score[1]} output_bytes={output_len} '
-                  f'position={pos} char={char} utf8_complete={complete}'
+                  f'first position={first_pos} char={first_char} valid_prefix={valid} '
+                  f'compressed_break={compressed_offset} approx_second_position={approx}'
+              )
+          for rank, (score, first_pos, first_char, second_pos, original, second_char, approx) in enumerate(ranked, 1):
+              lines.append(
+                  f'rank{rank}: valid_utf8_prefix={score[0]} output_bytes={score[1]} '
+                  f'first_position={first_pos} first_char={first_char} '
+                  f'second_position={second_pos} original={original} second_char={second_char} approx={approx}'
               )
 
           Path('.phase2-diagnostic.txt').write_text('\n'.join(lines) + '\n', encoding='utf-8')
-          print('\n'.join(lines[:15]))
+          print('\n'.join(lines[:30]))
           PY
 
-      - name: Commit UTF-8 ranking
+      - name: Commit second-corruption search
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .phase2-diagnostic.txt
-          git commit -m "rank phase 2 candidates by UTF-8 validity"
+          git commit -m "search second phase 2 corruption"
           git push origin HEAD:agent/phase2-logistics
