@@ -1,0 +1,30 @@
+name: Browser smoke test Phase 2
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, reopened, ready_for_review]
+
+jobs:
+  chrome-file-open:
+    if: github.head_ref == 'agent/phase2-logistics'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/phase2-logistics
+
+      - name: Open the downloaded HTML directly in Chrome
+        shell: bash
+        run: |
+          set -euo pipefail
+          chrome="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          test -n "$chrome"
+          "$chrome" --headless --no-sandbox --disable-gpu --allow-file-access-from-files --virtual-time-budget=2500 --enable-logging=stderr --dump-dom "file://$PWD/index.html" > /tmp/crown-dom.html 2> /tmp/crown-browser.log
+          grep -q "Phase 2 Logistics 0.4.0" /tmp/crown-dom.html
+          grep -q 'id="gameCanvas"' /tmp/crown-dom.html
+          grep -q 'id="logistics-efficiency"' /tmp/crown-dom.html
+          ! grep -q "読み込みに失敗しました" /tmp/crown-dom.html
+          ! grep -Eqi "Uncaught|TypeError:|ReferenceError:|SyntaxError:" /tmp/crown-browser.log
+          echo "Chrome file:// smoke test passed"
