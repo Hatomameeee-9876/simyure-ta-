@@ -19,7 +19,7 @@ jobs:
           ref: agent/phase2-logistics
           fetch-depth: 0
 
-      - name: Recover missing Base64 character
+      - name: Recover split Base64 payload
         shell: bash
         run: |
           set -euo pipefail
@@ -34,28 +34,33 @@ jobs:
               raise SystemExit(f'Expected 4 payload parts, found {len(files)}')
 
           parts = [''.join(p.read_text(encoding='utf-8').split()) for p in files]
-          first = parts[0]
-          if len(first) % 4 != 3:
-              raise SystemExit(f'Unexpected first-part length: {len(first)}')
+          first_group = ''.join(parts[:3])
+          tail_group = parts[3]
+
+          if len(first_group) % 4 != 3:
+              raise SystemExit(f'Unexpected first-group length: {len(first_group)}')
 
           try:
-              suffix = b''.join(base64.b64decode(part, validate=True) for part in parts[1:])
+              tail_bytes = base64.b64decode(tail_group, validate=True)
           except Exception as exc:
-              raise SystemExit(f'Unable to decode intact payload parts: {exc}')
+              raise SystemExit(f'Unable to decode tail payload: {exc}')
 
           alphabet = string.ascii_uppercase + string.ascii_lowercase + string.digits + '+/'
-          # A staging boundary is the most likely loss point, so test the end first.
-          positions = [len(first)] + list(range(len(first)))
+          boundaries = [len(parts[0]), len(parts[0]) + len(parts[1]), len(first_group)]
+          positions = []
+          for pos in boundaries + list(range(len(first_group) + 1)):
+              if pos not in positions:
+                  positions.append(pos)
+
           tested = 0
           result = None
-
           for pos in positions:
               for char in alphabet:
                   tested += 1
-                  candidate_text = first[:pos] + char + first[pos:]
+                  candidate_text = first_group[:pos] + char + first_group[pos:]
                   try:
-                      first_bytes = base64.b64decode(candidate_text, validate=True)
-                      html = gzip.decompress(first_bytes + suffix)
+                      head_bytes = base64.b64decode(candidate_text, validate=True)
+                      html = gzip.decompress(head_bytes + tail_bytes)
                   except Exception:
                       continue
 
@@ -73,7 +78,8 @@ jobs:
           pos, char, html = result
           Path('index.html').write_bytes(html)
           Path('.phase2-diagnostic.txt').write_text(
-              f'recovered=true\nmissing_position={pos}\nmissing_character={char}\n'
+              f'recovered=true\nbase64_group=parts-00-through-02\n'
+              f'missing_position={pos}\nmissing_character={char}\n'
               f'tested_candidates={tested}\nhtml_bytes={len(html)}\n',
               encoding='utf-8'
           )
