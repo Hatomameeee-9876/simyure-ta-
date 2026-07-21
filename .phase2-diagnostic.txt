@@ -1,8 +1,34 @@
-grouping=part00 / part01+part02 / part03
-damaged_group_chars=8999
-probe_error=Error -3 while decompressing data: invalid distance too far back
-fail_offset=1004
-produced_before_error=1560
-approx_base64_position=1338
-tested_candidates=576000
-recovered=false
+mode=rank-insertion-candidates
+grouping=part00+part01+part02 / part03
+searched_positions=0-2400
+tested_candidates=153664
+rank1: fail_offset=20532 produced=0 position=4 char=H
+rank2: fail_offset=20532 produced=0 position=4 char=F
+rank3: fail_offset=20532 produced=0 position=4 char=D
+rank4: fail_offset=20532 produced=0 position=4 char=B
+rank5: fail_offset=20480 produced=64732 position=1332 char=7
+rank6: fail_offset=20480 produced=64716 position=1327 char=o
+rank7: fail_offset=20480 produced=64716 position=1327 char=g
+rank8: fail_offset=20480 produced=64714 position=1326 char=z
+rank9: fail_offset=20480 produced=64714 position=1326 char=v
+rank10: fail_offset=20480 produced=64714 position=1326 char=r
+rank11: fail_offset=20480 produced=64714 position=1326 char=n
+rank12: fail_offset=20480 produced=64714 position=1326 char=f
+rank13: fail_offset=20480 produced=64714 position=1326 char=b
+rank14: fail_offset=20480 produced=64714 position=1326 char=X
+rank15: fail_offset=20480 produced=64714 position=1326 char=P
+rank16: fail_offset=20480 produced=64714 position=1326 char=L
+rank17: fail_offset=20480 produced=64714 position=1326 char=H
+rank18: fail_offset=20480 produced=64714 position=1326 char=7
+rank19: fail_offset=20480 produced=64714 position=1326 char=3
+rank20: fail_offset=20480 produced=64714 position=1326 char=/
+rank21: fail_offset=20480 produced=64714 position=1325 char=r
+rank22: fail_offset=20480 produced=64714 position=1325 char=q
+rank23: fail_offset=20480 produced=64714 position=1325 char=n
+rank24: fail_offset=20480 produced=64714 position=1325 char=m
+rank25: fail_offset=20480 produced=64714 position=1325 char=L
+rank26: fail_offset=20480 produced=64714 position=1325 char=K
+rank27: fail_offset=20480 produced=64714 position=1325 char=H
+rank28: fail_offset=20480 produced=64714 position=1325 char=G
+rank29: fail_offset=20480 produced=64712 position=1326 char=x
+rank30: fail_offset=20480 produced=64712 position=1326 char=t
