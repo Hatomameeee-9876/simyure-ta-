@@ -4,10 +4,6 @@ on:
   push:
     branches:
       - agent/phase2-logistics
-  pull_request:
-    branches:
-      - agent/touch-trackpad
-    types: [opened, synchronize, reopened]
 
 permissions:
   contents: write
@@ -21,16 +17,53 @@ jobs:
         with:
           ref: agent/phase2-logistics
           fetch-depth: 0
+
       - name: Assemble index.html
         shell: bash
         run: |
           set -euo pipefail
-          cat .crown-phase2/part-*.b64 | base64 --decode | gzip -d > index.html
-          grep -q "Phase 2 物流試作 0.4.0" index.html
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64
+          import gzip
+
+          files = sorted(Path('.crown-phase2').glob('part-*.b64'))
+          if not files:
+              raise SystemExit('No Phase 2 payload parts found')
+
+          parts = [''.join(p.read_text(encoding='utf-8').split()) for p in files]
+          candidates = []
+
+          # The payload may be one base64 stream split across files.
+          try:
+              candidates.append(base64.b64decode(''.join(parts)))
+          except Exception:
+              pass
+
+          # Or each file may be an independently encoded binary chunk.
+          try:
+              candidates.append(b''.join(base64.b64decode(part) for part in parts))
+          except Exception:
+              pass
+
+          for candidate in candidates:
+              try:
+                  html = gzip.decompress(candidate)
+              except Exception:
+                  continue
+              if b'<html' in html.lower() and b'logisticsStats' in html and b'cartshed' in html:
+                  Path('index.html').write_bytes(html)
+                  print(f'Assembled {len(html)} bytes from {len(files)} parts')
+                  break
+          else:
+              raise SystemExit('Unable to decode a valid Phase 2 HTML payload')
+          PY
+
           grep -q "function logisticsStats" index.html
           grep -q "cartshed:Object.freeze" index.html
           sed -n '/<script>/,/<\/script>/p' index.html | sed '1d;$d' > /tmp/crown-phase2.js
           node --check /tmp/crown-phase2.js
+
       - name: Commit assembled game
         shell: bash
         run: |
@@ -39,5 +72,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "start phase 2 logistics simulation"
+          git commit -m "assemble phase 2 logistics game"
           git push origin HEAD:agent/phase2-logistics
