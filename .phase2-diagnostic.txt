@@ -1,0 +1,11 @@
+files=4
+part-00.b64: chars=8999 padding=0 start=H4sIAADDXWoC/9W9 end=Aiym8Amdl2hDW1fu
+part-01.b64: chars=9000 padding=0 start=bL8jMALv/CLnD5/c end=PHn2H9Wy4UhhERGn
+part-02.b64: chars=9096 padding=2 start=ctVRkb5OML6XHleG end=/n//42S8vvMAAA==
+part-03.b64: chars=284 padding=1 start=9AVHzqcgsCPNvmOS end=b/8ffXu7qDMGAQA=
+joined-base64 decoded=20532 bytes
+per-part-base64 ERROR: Error: Incorrect padding
+joined-base64 magic=1f8b080000c35d6a02ffd5bd6b771b45
+joined-base64 GZIP ERROR: error: Error -3 while decompressing data: invalid distance too far back
+grep logisticsStats failed
+grep cartshed failed
