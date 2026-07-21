@@ -19,75 +19,76 @@ jobs:
           ref: agent/phase2-logistics
           fetch-depth: 0
 
-      - name: Diagnose and decode Phase 2 payload
+      - name: Recover missing Base64 character
         shell: bash
         run: |
-          set -u
+          set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
           import base64
           import gzip
-          import traceback
+          import string
 
-          report = []
           files = sorted(Path('.crown-phase2').glob('part-*.b64'))
-          report.append(f'files={len(files)}')
-          parts = []
-          for p in files:
-              text = ''.join(p.read_text(encoding='utf-8').split())
-              parts.append(text)
-              report.append(f'{p.name}: chars={len(text)} padding={text.count("=")} start={text[:16]} end={text[-16:]}')
+          if len(files) != 4:
+              raise SystemExit(f'Expected 4 payload parts, found {len(files)}')
 
-          candidates = []
-          try:
-              decoded = base64.b64decode(''.join(parts))
-              candidates.append(('joined-base64', decoded))
-              report.append(f'joined-base64 decoded={len(decoded)} bytes')
-          except Exception as e:
-              report.append(f'joined-base64 ERROR: {type(e).__name__}: {e}')
+          parts = [''.join(p.read_text(encoding='utf-8').split()) for p in files]
+          first = parts[0]
+          if len(first) % 4 != 3:
+              raise SystemExit(f'Unexpected first-part length: {len(first)}')
 
           try:
-              chunks = []
-              for i, part in enumerate(parts):
-                  chunk = base64.b64decode(part)
-                  chunks.append(chunk)
-                  report.append(f'part-{i:02d} decoded={len(chunk)} bytes')
-              decoded = b''.join(chunks)
-              candidates.append(('per-part-base64', decoded))
-              report.append(f'per-part-base64 decoded={len(decoded)} bytes')
-          except Exception as e:
-              report.append(f'per-part-base64 ERROR: {type(e).__name__}: {e}')
+              suffix = b''.join(base64.b64decode(part, validate=True) for part in parts[1:])
+          except Exception as exc:
+              raise SystemExit(f'Unable to decode intact payload parts: {exc}')
 
-          assembled = False
-          for name, candidate in candidates:
-              report.append(f'{name} magic={candidate[:16].hex()}')
-              try:
-                  html = gzip.decompress(candidate)
-                  report.append(f'{name} gzip={len(html)} bytes html={b"<html" in html.lower()} logisticsStats={b"logisticsStats" in html} cartshed={b"cartshed" in html}')
-                  if b'<html' in html.lower() and not assembled:
-                      Path('index.html').write_bytes(html)
-                      report.append(f'WROTE index.html from {name}')
-                      assembled = True
-              except Exception as e:
-                  report.append(f'{name} GZIP ERROR: {type(e).__name__}: {e}')
+          alphabet = string.ascii_uppercase + string.ascii_lowercase + string.digits + '+/'
+          # A staging boundary is the most likely loss point, so test the end first.
+          positions = [len(first)] + list(range(len(first)))
+          tested = 0
+          result = None
 
-          Path('.phase2-diagnostic.txt').write_text('\n'.join(report) + '\n', encoding='utf-8')
-          print('\n'.join(report))
+          for pos in positions:
+              for char in alphabet:
+                  tested += 1
+                  candidate_text = first[:pos] + char + first[pos:]
+                  try:
+                      first_bytes = base64.b64decode(candidate_text, validate=True)
+                      html = gzip.decompress(first_bytes + suffix)
+                  except Exception:
+                      continue
+
+                  if (b'<html' in html.lower()
+                          and b'function logisticsStats' in html
+                          and b'cartshed:Object.freeze' in html):
+                      result = (pos, char, html)
+                      break
+              if result:
+                  break
+
+          if not result:
+              raise SystemExit(f'No valid repair found after {tested} candidates')
+
+          pos, char, html = result
+          Path('index.html').write_bytes(html)
+          Path('.phase2-diagnostic.txt').write_text(
+              f'recovered=true\nmissing_position={pos}\nmissing_character={char}\n'
+              f'tested_candidates={tested}\nhtml_bytes={len(html)}\n',
+              encoding='utf-8'
+          )
+          print(f'Recovered Phase 2 HTML: position={pos}, char={char}, bytes={len(html)}')
           PY
 
-          if [ -f index.html ]; then
-            grep -q "function logisticsStats" index.html || echo "grep logisticsStats failed" >> .phase2-diagnostic.txt
-            grep -q "cartshed:Object.freeze" index.html || echo "grep cartshed failed" >> .phase2-diagnostic.txt
-            sed -n '/<script>/,/<\/script>/p' index.html | sed '1d;$d' > /tmp/crown-phase2.js
-            node --check /tmp/crown-phase2.js >> .phase2-diagnostic.txt 2>&1 || true
-          fi
+          sed -n '/<script>/,/<\/script>/p' index.html | sed '1d;$d' > /tmp/crown-phase2.js
+          node --check /tmp/crown-phase2.js
 
-      - name: Commit diagnostic result
+      - name: Commit recovered Phase 2
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html .phase2-diagnostic.txt
-          git commit -m "diagnose phase 2 payload assembly"
+          git commit -m "recover complete phase 2 game"
           git push origin HEAD:agent/phase2-logistics
