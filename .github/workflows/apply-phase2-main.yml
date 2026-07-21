@@ -1,0 +1,51 @@
+name: Apply rebuilt Phase 2 to main
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.pull_request.number == 5
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Fetch rebuilt Phase 2
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin agent/phase2-logistics
+          git show origin/agent/phase2-logistics:index.html > index.html
+
+      - name: Validate single-file game
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q "Phase 2 Logistics 0.4.0" index.html
+          grep -q "function logisticsStats" index.html
+          grep -q "cartshed:Object.freeze" index.html
+          grep -q "function drawCarts" index.html
+          grep -q "visualViewport" index.html
+          ! grep -q ".crown-packed/" index.html
+          ! grep -q "DecompressionStream" index.html
+          sed -n '/<script>/,/<\/script>/p' index.html | sed '1d;$d' > /tmp/crown-main.js
+          node --check /tmp/crown-main.js
+
+      - name: Commit to main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "restore playable Phase 2 logistics"
+          git push origin HEAD:main
