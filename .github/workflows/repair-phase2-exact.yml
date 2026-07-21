@@ -1,0 +1,111 @@
+name: Recover Phase 2 exact payload
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, reopened, ready_for_review]
+
+permissions:
+  contents: write
+
+jobs:
+  recover-exact:
+    if: github.head_ref == 'agent/phase2-logistics' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/phase2-logistics
+          fetch-depth: 0
+
+      - name: Exhaustively recover missing Base64 character
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64
+          import gzip
+          import string
+
+          files = sorted(Path('.crown-phase2').glob('part-*.b64'))
+          if len(files) != 4:
+              raise SystemExit(f'Expected four payload parts, found {len(files)}')
+
+          parts = [''.join(p.read_text(encoding='utf-8').split()) for p in files]
+          damaged_part = parts[0]
+          fixed_suffix = parts[1] + parts[2]
+          tail_bytes = base64.b64decode(parts[3], validate=True)
+          alphabet = string.ascii_uppercase + string.ascii_lowercase + string.digits + '+/'
+
+          tested = 0
+          result = None
+          for position in range(len(damaged_part) + 1):
+              for char in alphabet:
+                  tested += 1
+                  repaired_group = damaged_part[:position] + char + damaged_part[position:] + fixed_suffix
+                  try:
+                      compressed = base64.b64decode(repaired_group, validate=True) + tail_bytes
+                      html = gzip.decompress(compressed)
+                  except Exception:
+                      continue
+
+                  try:
+                      text = html.decode('utf-8')
+                  except UnicodeDecodeError:
+                      continue
+
+                  if (text.lstrip().lower().startswith('<!doctype html')
+                          and 'function logisticsStats' in text
+                          and 'cartshed:Object.freeze' in text
+                          and text.rstrip().lower().endswith('</html>')):
+                      result = (position, char, text)
+                      break
+              if result:
+                  break
+              if position % 500 == 0:
+                  print(f'checked position {position}/{len(damaged_part)}')
+
+          lines = [
+              'mode=exhaustive-single-character-recovery',
+              f'damaged_part_chars={len(damaged_part)}',
+              f'tested_candidates={tested}',
+          ]
+          if result is None:
+              lines.append('recovered=false')
+          else:
+              position, char, text = result
+              Path('index.html').write_text(text, encoding='utf-8', newline='')
+              lines.extend([
+                  'recovered=true',
+                  f'missing_position={position}',
+                  f'missing_character={char}',
+                  f'html_chars={len(text)}',
+              ])
+
+          Path('.phase2-diagnostic.txt').write_text('\n'.join(lines) + '\n', encoding='utf-8')
+          print('\n'.join(lines))
+          PY
+
+      - name: Validate recovered HTML
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q '^recovered=true$' .phase2-diagnostic.txt
+          grep -q "function logisticsStats" index.html
+          grep -q "cartshed:Object.freeze" index.html
+          grep -q "</html>" index.html
+          sed -n '/<script>/,/<\/script>/p' index.html | sed '1d;$d' > /tmp/crown-phase2.js
+          node --check /tmp/crown-phase2.js
+
+      - name: Commit recovered Phase 2
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .crown-phase2 .github/workflows/assemble-phase2-logistics.yml .phase2-diagnostic.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "recover complete phase 2 game"
+          git push origin HEAD:agent/phase2-logistics
