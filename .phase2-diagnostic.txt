@@ -1,54 +1,68 @@
-mode=rank-by-utf8-prefix
-grouping=part00+part01+part02 / part03
-searched_positions=0-2600
-tested_candidates=166464
-rank1: valid_utf8_prefix=26292 output_bytes=64687 position=1334 char=D utf8_complete=False
-rank2: valid_utf8_prefix=26292 output_bytes=64687 position=1334 char=C utf8_complete=False
-rank3: valid_utf8_prefix=26292 output_bytes=64687 position=1334 char=B utf8_complete=False
-rank4: valid_utf8_prefix=26292 output_bytes=64687 position=1334 char=A utf8_complete=False
-rank5: valid_utf8_prefix=26292 output_bytes=64687 position=1332 char=x utf8_complete=False
-rank6: valid_utf8_prefix=26292 output_bytes=64687 position=1332 char=t utf8_complete=False
-rank7: valid_utf8_prefix=26292 output_bytes=64687 position=1332 char=p utf8_complete=False
-rank8: valid_utf8_prefix=26292 output_bytes=64687 position=1332 char=l utf8_complete=False
-rank9: valid_utf8_prefix=26292 output_bytes=64687 position=1332 char=d utf8_complete=False
-rank10: valid_utf8_prefix=26292 output_bytes=64687 position=1332 char=Z utf8_complete=False
-rank11: valid_utf8_prefix=26292 output_bytes=64687 position=1332 char=V utf8_complete=False
-rank12: valid_utf8_prefix=26292 output_bytes=64687 position=1332 char=N utf8_complete=False
-rank13: valid_utf8_prefix=26292 output_bytes=64687 position=1332 char=J utf8_complete=False
-rank14: valid_utf8_prefix=26292 output_bytes=64687 position=1332 char=F utf8_complete=False
-rank15: valid_utf8_prefix=26292 output_bytes=64687 position=1332 char=9 utf8_complete=False
-rank16: valid_utf8_prefix=26292 output_bytes=64687 position=1332 char=5 utf8_complete=False
-rank17: valid_utf8_prefix=26292 output_bytes=64687 position=1332 char=1 utf8_complete=False
-rank18: valid_utf8_prefix=1598 output_bytes=64732 position=1332 char=7 utf8_complete=False
-rank19: valid_utf8_prefix=1586 output_bytes=64714 position=1325 char=r utf8_complete=False
-rank20: valid_utf8_prefix=1586 output_bytes=64714 position=1325 char=q utf8_complete=False
-rank21: valid_utf8_prefix=1586 output_bytes=64714 position=1325 char=L utf8_complete=False
-rank22: valid_utf8_prefix=1586 output_bytes=64714 position=1325 char=K utf8_complete=False
-rank23: valid_utf8_prefix=1583 output_bytes=64711 position=1329 char=b utf8_complete=False
-rank24: valid_utf8_prefix=1583 output_bytes=64711 position=1329 char=a utf8_complete=False
-rank25: valid_utf8_prefix=1583 output_bytes=64711 position=1329 char=T utf8_complete=False
-rank26: valid_utf8_prefix=1583 output_bytes=64711 position=1329 char=S utf8_complete=False
-rank27: valid_utf8_prefix=1582 output_bytes=64710 position=1329 char=L utf8_complete=False
-rank28: valid_utf8_prefix=1582 output_bytes=64710 position=1329 char=K utf8_complete=False
-rank29: valid_utf8_prefix=1582 output_bytes=64710 position=1329 char=D utf8_complete=False
-rank30: valid_utf8_prefix=1582 output_bytes=64710 position=1329 char=C utf8_complete=False
-rank31: valid_utf8_prefix=1582 output_bytes=64710 position=1328 char=p utf8_complete=False
-rank32: valid_utf8_prefix=1582 output_bytes=64710 position=1328 char=l utf8_complete=False
-rank33: valid_utf8_prefix=1582 output_bytes=64710 position=1328 char=Z utf8_complete=False
-rank34: valid_utf8_prefix=1582 output_bytes=64710 position=1328 char=V utf8_complete=False
-rank35: valid_utf8_prefix=1582 output_bytes=64710 position=1328 char=J utf8_complete=False
-rank36: valid_utf8_prefix=1582 output_bytes=64710 position=1328 char=F utf8_complete=False
-rank37: valid_utf8_prefix=1582 output_bytes=64710 position=1328 char=5 utf8_complete=False
-rank38: valid_utf8_prefix=1582 output_bytes=64710 position=1328 char=1 utf8_complete=False
-rank39: valid_utf8_prefix=1582 output_bytes=64710 position=1327 char=e utf8_complete=False
-rank40: valid_utf8_prefix=1582 output_bytes=64710 position=1327 char=d utf8_complete=False
-rank41: valid_utf8_prefix=1582 output_bytes=64710 position=1327 char=a utf8_complete=False
-rank42: valid_utf8_prefix=1582 output_bytes=64710 position=1327 char=Z utf8_complete=False
-rank43: valid_utf8_prefix=1582 output_bytes=64710 position=1327 char=W utf8_complete=False
-rank44: valid_utf8_prefix=1582 output_bytes=64710 position=1327 char=V utf8_complete=False
-rank45: valid_utf8_prefix=1582 output_bytes=64710 position=1327 char=S utf8_complete=False
-rank46: valid_utf8_prefix=1582 output_bytes=64710 position=1327 char=R utf8_complete=False
-rank47: valid_utf8_prefix=1582 output_bytes=64710 position=1327 char=O utf8_complete=False
-rank48: valid_utf8_prefix=1582 output_bytes=64710 position=1327 char=N utf8_complete=False
-rank49: valid_utf8_prefix=1582 output_bytes=64710 position=1327 char=K utf8_complete=False
-rank50: valid_utf8_prefix=1582 output_bytes=64710 position=1327 char=J utf8_complete=False
+mode=search-second-corruption
+tested_candidates=388080
+first position=1334 char=A valid_prefix=26292 compressed_break=9522 approx_second_position=12696
+first position=1334 char=B valid_prefix=26292 compressed_break=9522 approx_second_position=12696
+first position=1334 char=C valid_prefix=26292 compressed_break=9522 approx_second_position=12696
+first position=1334 char=D valid_prefix=26292 compressed_break=9522 approx_second_position=12696
+first position=1332 char=x valid_prefix=26292 compressed_break=9522 approx_second_position=12696
+first position=1332 char=t valid_prefix=26292 compressed_break=9522 approx_second_position=12696
+first position=1332 char=p valid_prefix=26292 compressed_break=9522 approx_second_position=12696
+first position=1332 char=l valid_prefix=26292 compressed_break=9522 approx_second_position=12696
+first position=1332 char=d valid_prefix=26292 compressed_break=9522 approx_second_position=12696
+first position=1332 char=Z valid_prefix=26292 compressed_break=9522 approx_second_position=12696
+first position=1332 char=V valid_prefix=26292 compressed_break=9522 approx_second_position=12696
+first position=1332 char=N valid_prefix=26292 compressed_break=9522 approx_second_position=12696
+first position=1332 char=J valid_prefix=26292 compressed_break=9522 approx_second_position=12696
+first position=1332 char=F valid_prefix=26292 compressed_break=9522 approx_second_position=12696
+first position=1332 char=9 valid_prefix=26292 compressed_break=9522 approx_second_position=12696
+first position=1332 char=5 valid_prefix=26292 compressed_break=9522 approx_second_position=12696
+rank1: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12695 original=2 second_char=P approx=12696
+rank2: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12695 original=2 second_char=O approx=12696
+rank3: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12695 original=2 second_char=N approx=12696
+rank4: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12695 original=2 second_char=M approx=12696
+rank5: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12695 original=2 second_char=L approx=12696
+rank6: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12695 original=2 second_char=K approx=12696
+rank7: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12695 original=2 second_char=J approx=12696
+rank8: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12695 original=2 second_char=I approx=12696
+rank9: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12695 original=2 second_char=H approx=12696
+rank10: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12695 original=2 second_char=G approx=12696
+rank11: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12695 original=2 second_char=F approx=12696
+rank12: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12695 original=2 second_char=E approx=12696
+rank13: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12695 original=2 second_char=D approx=12696
+rank14: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12695 original=2 second_char=C approx=12696
+rank15: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12695 original=2 second_char=B approx=12696
+rank16: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12695 original=2 second_char=A approx=12696
+rank17: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12692 original=U second_char=q approx=12696
+rank18: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12692 original=U second_char=m approx=12696
+rank19: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12692 original=U second_char=a approx=12696
+rank20: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12692 original=U second_char=W approx=12696
+rank21: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12692 original=U second_char=O approx=12696
+rank22: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12692 original=U second_char=K approx=12696
+rank23: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12692 original=U second_char=G approx=12696
+rank24: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12692 original=U second_char=6 approx=12696
+rank25: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12692 original=U second_char=2 approx=12696
+rank26: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12689 original=W second_char=z approx=12696
+rank27: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12689 original=W second_char=y approx=12696
+rank28: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12689 original=W second_char=c approx=12696
+rank29: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12689 original=W second_char=b approx=12696
+rank30: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12689 original=W second_char=Y approx=12696
+rank31: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12689 original=W second_char=U approx=12696
+rank32: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12689 original=W second_char=T approx=12696
+rank33: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12689 original=W second_char=S approx=12696
+rank34: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12689 original=W second_char=8 approx=12696
+rank35: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12689 original=W second_char=7 approx=12696
+rank36: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12689 original=W second_char=4 approx=12696
+rank37: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12689 original=W second_char=0 approx=12696
+rank38: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12686 original=a second_char=h approx=12696
+rank39: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12686 original=a second_char=g approx=12696
+rank40: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12686 original=a second_char=B approx=12696
+rank41: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12686 original=a second_char=A approx=12696
+rank42: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12686 original=a second_char=0 approx=12696
+rank43: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12680 original=r second_char=I approx=12696
+rank44: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=C second_position=12695 original=2 second_char=P approx=12696
+rank45: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=C second_position=12695 original=2 second_char=O approx=12696
+rank46: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=C second_position=12695 original=2 second_char=N approx=12696
+rank47: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=C second_position=12695 original=2 second_char=M approx=12696
+rank48: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=C second_position=12695 original=2 second_char=L approx=12696
+rank49: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=C second_position=12695 original=2 second_char=K approx=12696
+rank50: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=C second_position=12695 original=2 second_char=J approx=12696
