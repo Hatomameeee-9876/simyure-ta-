@@ -19,13 +19,14 @@ jobs:
           ref: agent/phase2-logistics
           fetch-depth: 0
 
-      - name: Recover HTML from near-complete DEFLATE stream
+      - name: Diagnose recovered HTML candidates
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
           import base64
+          import heapq
           import re
           import string
           import subprocess
@@ -37,10 +38,10 @@ jobs:
           damaged = ''.join(parts[:3])
           tail = base64.b64decode(parts[3], validate=True)
           alphabet = string.ascii_uppercase + string.ascii_lowercase + string.digits + '+/'
-
-          valid = []
+          top = []
           tested = 0
-          for pos in range(1260, 1401):
+
+          for pos in range(1290, 1361):
               for char in alphabet:
                   tested += 1
                   candidate = damaged[:pos] + char + damaged[pos:]
@@ -48,92 +49,74 @@ jobs:
                       blob = base64.b64decode(candidate, validate=True) + tail
                   except Exception:
                       continue
-
                   inflater = zlib.decompressobj(16 + zlib.MAX_WBITS)
                   output = bytearray()
                   error = None
-                  for off in range(0, len(blob), 128):
+                  for off in range(0, len(blob), 64):
                       try:
-                          output.extend(inflater.decompress(blob[off:off + 128]))
+                          output.extend(inflater.decompress(blob[off:off + 64]))
                       except zlib.error as exc:
                           error = str(exc)
                           break
+                  item = (len(output), pos, char, bytes(output), error, inflater.eof)
+                  if len(top) < 40:
+                      heapq.heappush(top, item)
+                  elif item[:3] > top[0][:3]:
+                      heapq.heapreplace(top, item)
 
-                  try:
-                      text = output.decode('utf-8')
-                  except UnicodeDecodeError:
-                      continue
+          ranked = sorted(top, key=lambda item: item[0], reverse=True)
+          lines = [f'tested_candidates={tested}']
+          for rank, (size, pos, char, output, error, eof) in enumerate(ranked, 1):
+              utf8 = True
+              try:
+                  text = output.decode('utf-8')
+              except UnicodeDecodeError as exc:
+                  utf8 = False
+                  text = output.decode('utf-8', errors='replace')
+                  decode_error = str(exc)
+              else:
+                  decode_error = ''
 
-                  if not text.lstrip().lower().startswith('<!doctype html'):
-                      continue
-                  if 'function logisticsStats' not in text or 'cartshed:Object.freeze' not in text:
-                      continue
-                  if 'Phase 2' not in text or '</html>' not in text:
-                      continue
-
-                  scripts = re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>', text, flags=re.S | re.I)
-                  if not scripts:
-                      continue
-                  js = '\n'.join(scripts)
+              flags = {
+                  'doctype': text.lstrip().lower().startswith('<!doctype html'),
+                  'logistics': 'function logisticsStats' in text,
+                  'cartshed': 'cartshed:Object.freeze' in text,
+                  'phase2': 'Phase 2' in text,
+                  'close_script': '</script>' in text,
+                  'close_html': '</html>' in text,
+                  'ends_html': text.rstrip().lower().endswith('</html>'),
+              }
+              node_ok = False
+              node_msg = ''
+              scripts = re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>', text, flags=re.S | re.I)
+              if scripts:
                   with tempfile.NamedTemporaryFile('w', suffix='.js', encoding='utf-8', delete=False) as tmp:
-                      tmp.write(js)
+                      tmp.write('\n'.join(scripts))
                       tmp_path = tmp.name
                   check = subprocess.run(['node', '--check', tmp_path], capture_output=True, text=True)
                   Path(tmp_path).unlink(missing_ok=True)
-                  if check.returncode != 0:
-                      continue
+                  node_ok = check.returncode == 0
+                  node_msg = (check.stderr or check.stdout).splitlines()[-1:] or ['']
+                  node_msg = node_msg[0]
 
-                  complete = text.rstrip().lower().endswith('</html>')
-                  valid.append({
-                      'pos': pos,
-                      'char': char,
-                      'text': text,
-                      'bytes': len(output),
-                      'complete': complete,
-                      'error': error,
-                      'eof': inflater.eof,
-                  })
+              suffix = text[-240:].replace('\\', '\\\\').replace('\n', '\\n').replace('\r', '\\r')
+              lines.append(
+                  f'rank{rank}: bytes={size} position={pos} char={char} eof={eof} utf8={utf8} '
+                  + ' '.join(f'{key}={value}' for key, value in flags.items())
+                  + f' node_ok={node_ok} error={error!r} decode_error={decode_error!r}'
+              )
+              lines.append(f'rank{rank}_suffix={suffix}')
 
-          if not valid:
-              raise SystemExit(f'No structurally valid HTML candidate found after {tested} tests')
-
-          valid.sort(key=lambda item: (item['complete'], item['eof'], item['bytes']), reverse=True)
-          best = valid[0]
-          Path('index.html').write_text(best['text'], encoding='utf-8', newline='')
-          lines = [
-              'recovered=true',
-              'method=salvage-decompressed-html',
-              f'tested_candidates={tested}',
-              f'valid_candidates={len(valid)}',
-              f'missing_position={best["pos"]}',
-              f'missing_character={best["char"]}',
-              f'html_bytes={best["bytes"]}',
-              f'ends_with_html={best["complete"]}',
-              f'inflater_eof={best["eof"]}',
-              f'final_error={best["error"]}',
-          ]
-          for i, item in enumerate(valid[:10], 1):
-              lines.append(f'candidate{i}: position={item["pos"]} char={item["char"]} bytes={item["bytes"]} complete={item["complete"]} eof={item["eof"]}')
           Path('.phase2-diagnostic.txt').write_text('\n'.join(lines) + '\n', encoding='utf-8')
-          print('\n'.join(lines))
+          print('\n'.join(lines[:8]))
           PY
 
-      - name: Validate recovered game
-        shell: bash
-        run: |
-          set -euo pipefail
-          grep -q "function logisticsStats" index.html
-          grep -q "cartshed:Object.freeze" index.html
-          grep -q "</html>" index.html
-          sed -n '/<script>/,/<\/script>/p' index.html | sed '1d;$d' > /tmp/crown-phase2.js
-          node --check /tmp/crown-phase2.js
-
-      - name: Commit recovered game
+      - name: Commit diagnostic
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html .phase2-diagnostic.txt
-          git commit -m "recover complete phase 2 HTML"
+          git add .phase2-diagnostic.txt
+          git commit -m "diagnose recovered phase 2 HTML"
           git push origin HEAD:agent/phase2-logistics
