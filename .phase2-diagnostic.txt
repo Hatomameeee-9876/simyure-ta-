@@ -1,8 +1,8 @@
-group_chars=27095
-tail_chars=284
+grouping=part00+part01 / part02 / part03
+damaged_group_chars=17999
 probe_error=Error -3 while decompressing data: invalid distance too far back
 fail_offset=1004
 produced_before_error=1560
 approx_base64_position=1338
-tested_candidates=184192
+tested_candidates=610048
 recovered=false
