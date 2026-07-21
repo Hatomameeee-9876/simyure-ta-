@@ -1,0 +1,73 @@
+name: Repair Phase 2 assembly
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: github.head_ref == 'agent/phase2-logistics' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/phase2-logistics
+          fetch-depth: 0
+
+      - name: Decode Phase 2 payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64
+          import gzip
+
+          files = sorted(Path('.crown-phase2').glob('part-*.b64'))
+          if not files:
+              raise SystemExit('No Phase 2 payload parts found')
+
+          parts = [''.join(p.read_text(encoding='utf-8').split()) for p in files]
+          candidates = []
+          try:
+              candidates.append(base64.b64decode(''.join(parts)))
+          except Exception:
+              pass
+          try:
+              candidates.append(b''.join(base64.b64decode(part) for part in parts))
+          except Exception:
+              pass
+
+          for candidate in candidates:
+              try:
+                  html = gzip.decompress(candidate)
+              except Exception:
+                  continue
+              if b'<html' in html.lower() and b'logisticsStats' in html and b'cartshed' in html:
+                  Path('index.html').write_bytes(html)
+                  print(f'Assembled {len(html)} bytes from {len(files)} parts')
+                  break
+          else:
+              raise SystemExit('Unable to decode a valid Phase 2 HTML payload')
+          PY
+
+          grep -q "function logisticsStats" index.html
+          grep -q "cartshed:Object.freeze" index.html
+          sed -n '/<script>/,/<\/script>/p' index.html | sed '1d;$d' > /tmp/crown-phase2.js
+          node --check /tmp/crown-phase2.js
+
+      - name: Commit assembled Phase 2
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .crown-phase2 .github/workflows/assemble-phase2-logistics.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "assemble phase 2 logistics game"
+          git push origin HEAD:agent/phase2-logistics
