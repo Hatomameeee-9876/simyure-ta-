@@ -1,68 +1,65 @@
-mode=search-second-corruption
-tested_candidates=388080
-first position=1334 char=A valid_prefix=26292 compressed_break=9522 approx_second_position=12696
-first position=1334 char=B valid_prefix=26292 compressed_break=9522 approx_second_position=12696
-first position=1334 char=C valid_prefix=26292 compressed_break=9522 approx_second_position=12696
-first position=1334 char=D valid_prefix=26292 compressed_break=9522 approx_second_position=12696
-first position=1332 char=x valid_prefix=26292 compressed_break=9522 approx_second_position=12696
-first position=1332 char=t valid_prefix=26292 compressed_break=9522 approx_second_position=12696
-first position=1332 char=p valid_prefix=26292 compressed_break=9522 approx_second_position=12696
-first position=1332 char=l valid_prefix=26292 compressed_break=9522 approx_second_position=12696
-first position=1332 char=d valid_prefix=26292 compressed_break=9522 approx_second_position=12696
-first position=1332 char=Z valid_prefix=26292 compressed_break=9522 approx_second_position=12696
-first position=1332 char=V valid_prefix=26292 compressed_break=9522 approx_second_position=12696
-first position=1332 char=N valid_prefix=26292 compressed_break=9522 approx_second_position=12696
-first position=1332 char=J valid_prefix=26292 compressed_break=9522 approx_second_position=12696
-first position=1332 char=F valid_prefix=26292 compressed_break=9522 approx_second_position=12696
-first position=1332 char=9 valid_prefix=26292 compressed_break=9522 approx_second_position=12696
-first position=1332 char=5 valid_prefix=26292 compressed_break=9522 approx_second_position=12696
-rank1: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12695 original=2 second_char=P approx=12696
-rank2: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12695 original=2 second_char=O approx=12696
-rank3: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12695 original=2 second_char=N approx=12696
-rank4: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12695 original=2 second_char=M approx=12696
-rank5: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12695 original=2 second_char=L approx=12696
-rank6: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12695 original=2 second_char=K approx=12696
-rank7: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12695 original=2 second_char=J approx=12696
-rank8: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12695 original=2 second_char=I approx=12696
-rank9: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12695 original=2 second_char=H approx=12696
-rank10: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12695 original=2 second_char=G approx=12696
-rank11: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12695 original=2 second_char=F approx=12696
-rank12: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12695 original=2 second_char=E approx=12696
-rank13: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12695 original=2 second_char=D approx=12696
-rank14: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12695 original=2 second_char=C approx=12696
-rank15: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12695 original=2 second_char=B approx=12696
-rank16: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12695 original=2 second_char=A approx=12696
-rank17: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12692 original=U second_char=q approx=12696
-rank18: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12692 original=U second_char=m approx=12696
-rank19: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12692 original=U second_char=a approx=12696
-rank20: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12692 original=U second_char=W approx=12696
-rank21: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12692 original=U second_char=O approx=12696
-rank22: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12692 original=U second_char=K approx=12696
-rank23: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12692 original=U second_char=G approx=12696
-rank24: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12692 original=U second_char=6 approx=12696
-rank25: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12692 original=U second_char=2 approx=12696
-rank26: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12689 original=W second_char=z approx=12696
-rank27: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12689 original=W second_char=y approx=12696
-rank28: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12689 original=W second_char=c approx=12696
-rank29: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12689 original=W second_char=b approx=12696
-rank30: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12689 original=W second_char=Y approx=12696
-rank31: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12689 original=W second_char=U approx=12696
-rank32: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12689 original=W second_char=T approx=12696
-rank33: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12689 original=W second_char=S approx=12696
-rank34: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12689 original=W second_char=8 approx=12696
-rank35: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12689 original=W second_char=7 approx=12696
-rank36: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12689 original=W second_char=4 approx=12696
-rank37: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12689 original=W second_char=0 approx=12696
-rank38: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12686 original=a second_char=h approx=12696
-rank39: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12686 original=a second_char=g approx=12696
-rank40: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12686 original=a second_char=B approx=12696
-rank41: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12686 original=a second_char=A approx=12696
-rank42: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12686 original=a second_char=0 approx=12696
-rank43: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=D second_position=12680 original=r second_char=I approx=12696
-rank44: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=C second_position=12695 original=2 second_char=P approx=12696
-rank45: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=C second_position=12695 original=2 second_char=O approx=12696
-rank46: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=C second_position=12695 original=2 second_char=N approx=12696
-rank47: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=C second_position=12695 original=2 second_char=M approx=12696
-rank48: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=C second_position=12695 original=2 second_char=L approx=12696
-rank49: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=C second_position=12695 original=2 second_char=K approx=12696
-rank50: valid_utf8_prefix=50914 output_bytes=64682 first_position=1334 first_char=C second_position=12695 original=2 second_char=J approx=12696
+mode=locate-third-corruption
+first_char=A second_char=A valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=A second_char=B valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=A second_char=C valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=A second_char=D valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=A second_char=E valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=A second_char=F valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=A second_char=G valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=A second_char=H valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=A second_char=I valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=A second_char=J valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=A second_char=K valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=A second_char=L valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=A second_char=M valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=A second_char=N valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=A second_char=O valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=A second_char=P valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=B second_char=A valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=B second_char=B valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=B second_char=C valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=B second_char=D valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=B second_char=E valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=B second_char=F valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=B second_char=G valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=B second_char=H valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=B second_char=I valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=B second_char=J valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=B second_char=K valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=B second_char=L valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=B second_char=M valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=B second_char=N valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=B second_char=O valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=B second_char=P valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=C second_char=A valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=C second_char=B valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=C second_char=C valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=C second_char=D valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=C second_char=E valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=C second_char=F valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=C second_char=G valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=C second_char=H valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=C second_char=I valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=C second_char=J valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=C second_char=K valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=C second_char=L valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=C second_char=M valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=C second_char=N valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=C second_char=O valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=C second_char=P valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=D second_char=A valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=D second_char=B valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=D second_char=C valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=D second_char=D valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=D second_char=E valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=D second_char=F valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=D second_char=G valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=D second_char=H valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=D second_char=I valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=D second_char=J valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=D second_char=K valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=D second_char=L valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=D second_char=M valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=D second_char=N valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=D second_char=O valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
+first_char=D second_char=P valid_prefix=50914 compressed_break=16313 approx_base64_position=21750 reason=utf8:'utf-8' codec can't decode byte 0xb4 in position 0: invalid start byte
