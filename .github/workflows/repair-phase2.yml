@@ -19,7 +19,7 @@ jobs:
           ref: agent/phase2-logistics
           fetch-depth: 0
 
-      - name: Diagnose recovered HTML candidates
+      - name: Rank candidates by valid UTF-8 prefix
         shell: bash
         run: |
           set -euo pipefail
@@ -27,10 +27,7 @@ jobs:
           from pathlib import Path
           import base64
           import heapq
-          import re
           import string
-          import subprocess
-          import tempfile
           import zlib
 
           files = sorted(Path('.crown-phase2').glob('part-*.b64'))
@@ -41,7 +38,7 @@ jobs:
           top = []
           tested = 0
 
-          for pos in range(1290, 1361):
+          for pos in range(0, 2601):
               for char in alphabet:
                   tested += 1
                   candidate = damaged[:pos] + char + damaged[pos:]
@@ -49,74 +46,59 @@ jobs:
                       blob = base64.b64decode(candidate, validate=True) + tail
                   except Exception:
                       continue
+
                   inflater = zlib.decompressobj(16 + zlib.MAX_WBITS)
                   output = bytearray()
-                  error = None
-                  for off in range(0, len(blob), 64):
+                  for off in range(0, len(blob), 128):
                       try:
-                          output.extend(inflater.decompress(blob[off:off + 64]))
-                      except zlib.error as exc:
-                          error = str(exc)
+                          output.extend(inflater.decompress(blob[off:off + 128]))
+                      except zlib.error:
                           break
-                  item = (len(output), pos, char, bytes(output), error, inflater.eof)
-                  if len(top) < 40:
+
+                  try:
+                      output.decode('utf-8')
+                      valid_prefix = len(output)
+                      utf8_complete = True
+                  except UnicodeDecodeError as exc:
+                      valid_prefix = exc.start
+                      utf8_complete = False
+
+                  source_prefix = 0
+                  text_prefix = output[:valid_prefix].decode('utf-8', errors='ignore')
+                  if text_prefix.lstrip().lower().startswith('<!doctype html'):
+                      source_prefix += 1000000
+                  if '<style>' in text_prefix:
+                      source_prefix += 100000
+                  score = (source_prefix + valid_prefix, valid_prefix, len(output))
+                  item = (score, pos, char, utf8_complete, len(output))
+                  if len(top) < 50:
                       heapq.heappush(top, item)
-                  elif item[:3] > top[0][:3]:
+                  elif item > top[0]:
                       heapq.heapreplace(top, item)
 
-          ranked = sorted(top, key=lambda item: item[0], reverse=True)
-          lines = [f'tested_candidates={tested}']
-          for rank, (size, pos, char, output, error, eof) in enumerate(ranked, 1):
-              utf8 = True
-              try:
-                  text = output.decode('utf-8')
-              except UnicodeDecodeError as exc:
-                  utf8 = False
-                  text = output.decode('utf-8', errors='replace')
-                  decode_error = str(exc)
-              else:
-                  decode_error = ''
-
-              flags = {
-                  'doctype': text.lstrip().lower().startswith('<!doctype html'),
-                  'logistics': 'function logisticsStats' in text,
-                  'cartshed': 'cartshed:Object.freeze' in text,
-                  'phase2': 'Phase 2' in text,
-                  'close_script': '</script>' in text,
-                  'close_html': '</html>' in text,
-                  'ends_html': text.rstrip().lower().endswith('</html>'),
-              }
-              node_ok = False
-              node_msg = ''
-              scripts = re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>', text, flags=re.S | re.I)
-              if scripts:
-                  with tempfile.NamedTemporaryFile('w', suffix='.js', encoding='utf-8', delete=False) as tmp:
-                      tmp.write('\n'.join(scripts))
-                      tmp_path = tmp.name
-                  check = subprocess.run(['node', '--check', tmp_path], capture_output=True, text=True)
-                  Path(tmp_path).unlink(missing_ok=True)
-                  node_ok = check.returncode == 0
-                  node_msg = (check.stderr or check.stdout).splitlines()[-1:] or ['']
-                  node_msg = node_msg[0]
-
-              suffix = text[-240:].replace('\\', '\\\\').replace('\n', '\\n').replace('\r', '\\r')
+          ranked = sorted(top, reverse=True)
+          lines = [
+              'mode=rank-by-utf8-prefix',
+              'grouping=part00+part01+part02 / part03',
+              'searched_positions=0-2600',
+              f'tested_candidates={tested}',
+          ]
+          for rank, (score, pos, char, complete, output_len) in enumerate(ranked, 1):
               lines.append(
-                  f'rank{rank}: bytes={size} position={pos} char={char} eof={eof} utf8={utf8} '
-                  + ' '.join(f'{key}={value}' for key, value in flags.items())
-                  + f' node_ok={node_ok} error={error!r} decode_error={decode_error!r}'
+                  f'rank{rank}: valid_utf8_prefix={score[1]} output_bytes={output_len} '
+                  f'position={pos} char={char} utf8_complete={complete}'
               )
-              lines.append(f'rank{rank}_suffix={suffix}')
 
           Path('.phase2-diagnostic.txt').write_text('\n'.join(lines) + '\n', encoding='utf-8')
-          print('\n'.join(lines[:8]))
+          print('\n'.join(lines[:15]))
           PY
 
-      - name: Commit diagnostic
+      - name: Commit UTF-8 ranking
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .phase2-diagnostic.txt
-          git commit -m "diagnose recovered phase 2 HTML"
+          git commit -m "rank phase 2 candidates by UTF-8 validity"
           git push origin HEAD:agent/phase2-logistics
