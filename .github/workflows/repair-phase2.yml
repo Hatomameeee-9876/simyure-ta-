@@ -19,97 +19,72 @@ jobs:
           ref: agent/phase2-logistics
           fetch-depth: 0
 
-      - name: Recover final Base64 grouping
+      - name: Rank missing-character candidates
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
           import base64
-          import gzip
+          import heapq
           import string
           import zlib
 
           files = sorted(Path('.crown-phase2').glob('part-*.b64'))
           parts = [''.join(p.read_text(encoding='utf-8').split()) for p in files]
-          damaged_group = parts[0]
-          suffix_groups = [parts[1] + parts[2], parts[3]]
-          suffix_bytes = b''.join(base64.b64decode(group, validate=True) for group in suffix_groups)
-          report = [
-              'grouping=part00 / part01+part02 / part03',
-              f'damaged_group_chars={len(damaged_group)}',
-          ]
-
-          probe_text = damaged_group + 'A'
-          probe_head = base64.b64decode(probe_text, validate=True)
-          probe_blob = probe_head + suffix_bytes
-          inflater = zlib.decompressobj(16 + zlib.MAX_WBITS)
-          fail_offset = None
-          produced = 0
-          for index, byte in enumerate(probe_blob):
-              try:
-                  produced += len(inflater.decompress(bytes([byte])))
-              except zlib.error as exc:
-                  fail_offset = index
-                  report.append(f'probe_error={exc}')
-                  break
-          report.append(f'fail_offset={fail_offset}')
-          report.append(f'produced_before_error={produced}')
-          approx = len(damaged_group) if fail_offset is None else min(len(damaged_group), max(0, (fail_offset * 4) // 3))
-          report.append(f'approx_base64_position={approx}')
-
+          damaged = ''.join(parts[:3])
+          tail = base64.b64decode(parts[3], validate=True)
           alphabet = string.ascii_uppercase + string.ascii_lowercase + string.digits + '+/'
-          candidate_positions = []
-          for pos in [len(damaged_group)]:
-              if pos not in candidate_positions:
-                  candidate_positions.append(pos)
-          for radius in (128, 512, 2048, 8192):
-              lo = max(0, approx - radius)
-              hi = min(len(damaged_group), approx + radius)
-              for pos in range(lo, hi + 1):
-                  if pos not in candidate_positions:
-                      candidate_positions.append(pos)
-
+          max_position = min(2400, len(damaged))
+          top = []
           tested = 0
-          result = None
-          for pos in candidate_positions:
+
+          for pos in range(max_position + 1):
               for char in alphabet:
                   tested += 1
-                  candidate_text = damaged_group[:pos] + char + damaged_group[pos:]
+                  text = damaged[:pos] + char + damaged[pos:]
                   try:
-                      head_bytes = base64.b64decode(candidate_text, validate=True)
-                      html = gzip.decompress(head_bytes + suffix_bytes)
+                      blob = base64.b64decode(text, validate=True) + tail
                   except Exception:
                       continue
-                  if b'<html' in html.lower() and b'logisticsStats' in html and b'cartshed' in html:
-                      result = (pos, char, html)
-                      break
-              if result:
-                  break
 
-          report.append(f'tested_candidates={tested}')
-          if result:
-              pos, char, html = result
-              Path('index.html').write_bytes(html)
-              report.extend(['recovered=true', f'missing_position={pos}', f'missing_character={char}', f'html_bytes={len(html)}'])
-          else:
-              report.append('recovered=false')
+                  inflater = zlib.decompressobj(16 + zlib.MAX_WBITS)
+                  fail_at = len(blob)
+                  produced = 0
+                  for off in range(0, len(blob), 64):
+                      try:
+                          produced += len(inflater.decompress(blob[off:off + 64]))
+                      except zlib.error:
+                          fail_at = off
+                          break
 
-          Path('.phase2-diagnostic.txt').write_text('\n'.join(report) + '\n', encoding='utf-8')
-          print('\n'.join(report))
+                  score = (fail_at, produced)
+                  item = (score, pos, char)
+                  if len(top) < 30:
+                      heapq.heappush(top, item)
+                  elif item > top[0]:
+                      heapq.heapreplace(top, item)
+
+          ranked = sorted(top, reverse=True)
+          lines = [
+              'mode=rank-insertion-candidates',
+              'grouping=part00+part01+part02 / part03',
+              f'searched_positions=0-{max_position}',
+              f'tested_candidates={tested}',
+          ]
+          for rank, (score, pos, char) in enumerate(ranked, 1):
+              lines.append(f'rank{rank}: fail_offset={score[0]} produced={score[1]} position={pos} char={char}')
+
+          Path('.phase2-diagnostic.txt').write_text('\n'.join(lines) + '\n', encoding='utf-8')
+          print('\n'.join(lines))
           PY
 
-          if grep -q '^recovered=true$' .phase2-diagnostic.txt; then
-            sed -n '/<script>/,/<\/script>/p' index.html | sed '1d;$d' > /tmp/crown-phase2.js
-            node --check /tmp/crown-phase2.js
-          fi
-
-      - name: Commit recovery result
+      - name: Commit ranking result
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html .phase2-diagnostic.txt
-          git commit -m "test final phase 2 payload grouping"
+          git add .phase2-diagnostic.txt
+          git commit -m "rank phase 2 corruption candidates"
           git push origin HEAD:agent/phase2-logistics
