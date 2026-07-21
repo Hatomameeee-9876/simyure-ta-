@@ -19,7 +19,7 @@ jobs:
           ref: agent/phase2-logistics
           fetch-depth: 0
 
-      - name: Locate second corruption precisely
+      - name: Locate third corruption
         shell: bash
         run: |
           set -euo pipefail
@@ -33,29 +33,19 @@ jobs:
           parts = [''.join(p.read_text(encoding='utf-8').split()) for p in files]
           damaged = ''.join(parts[:3])
           tail = base64.b64decode(parts[3], validate=True)
-          first_candidates = [
-              (1334, 'A'), (1334, 'B'), (1334, 'C'), (1334, 'D'),
-              (1332, 'x'), (1332, 't'), (1332, 'p'), (1332, 'l'),
-              (1332, 'd'), (1332, 'Z'), (1332, 'V'), (1332, 'N'),
-              (1332, 'J'), (1332, 'F'), (1332, '9'), (1332, '5'),
-          ]
 
-          lines = ['mode=locate-second-corruption']
-          for first_pos, first_char in first_candidates:
-              text = damaged[:first_pos] + first_char + damaged[first_pos:]
+          def locate(first_char, second_char):
+              text = damaged[:1334] + first_char + damaged[1334:]
+              text = text[:12695] + second_char + text[12696:]
               blob = base64.b64decode(text, validate=True) + tail
               inflater = zlib.decompressobj(16 + zlib.MAX_WBITS)
               decoder = codecs.getincrementaldecoder('utf-8')('strict')
               valid = 0
-              break_input = None
-              break_reason = None
               for index, byte in enumerate(blob):
                   try:
                       out = inflater.decompress(bytes([byte]))
                   except zlib.error as exc:
-                      break_input = index
-                      break_reason = f'zlib:{exc}'
-                      break
+                      return valid, index, f'zlib:{exc}'
                   if not out:
                       continue
                   try:
@@ -63,25 +53,29 @@ jobs:
                       valid += len(out)
                   except UnicodeDecodeError as exc:
                       valid += exc.start
-                      break_input = index
-                      break_reason = f'utf8:{exc}'
-                      break
-              approx = None if break_input is None else (break_input * 4) // 3
-              lines.append(
-                  f'first_position={first_pos} first_char={first_char} valid_prefix={valid} '
-                  f'compressed_break={break_input} approx_base64_position={approx} reason={break_reason}'
-              )
+                      return valid, index, f'utf8:{exc}'
+              return valid, len(blob), 'end'
+
+          lines = ['mode=locate-third-corruption']
+          for first_char in 'ABCD':
+              for second_char in 'ABCDEFGHIJKLMNOP':
+                  valid, compressed_break, reason = locate(first_char, second_char)
+                  approx = (compressed_break * 4) // 3
+                  lines.append(
+                      f'first_char={first_char} second_char={second_char} valid_prefix={valid} '
+                      f'compressed_break={compressed_break} approx_base64_position={approx} reason={reason}'
+                  )
 
           Path('.phase2-diagnostic.txt').write_text('\n'.join(lines) + '\n', encoding='utf-8')
-          print('\n'.join(lines))
+          print('\n'.join(lines[:20]))
           PY
 
-      - name: Commit location diagnostic
+      - name: Commit third-corruption location
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .phase2-diagnostic.txt
-          git commit -m "locate second phase 2 corruption"
+          git commit -m "locate third phase 2 corruption"
           git push origin HEAD:agent/phase2-logistics
