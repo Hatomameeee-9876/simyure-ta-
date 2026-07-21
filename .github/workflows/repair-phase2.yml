@@ -19,7 +19,7 @@ jobs:
           ref: agent/phase2-logistics
           fetch-depth: 0
 
-      - name: Locate and recover Base64 corruption
+      - name: Recover alternate Base64 grouping
         shell: bash
         run: |
           set -euo pipefail
@@ -32,20 +32,17 @@ jobs:
 
           files = sorted(Path('.crown-phase2').glob('part-*.b64'))
           parts = [''.join(p.read_text(encoding='utf-8').split()) for p in files]
-          first_group = ''.join(parts[:3])
-          tail_group = parts[3]
-          tail_bytes = base64.b64decode(tail_group, validate=True)
-          report = [f'group_chars={len(first_group)}', f'tail_chars={len(tail_group)}']
+          damaged_group = parts[0] + parts[1]
+          suffix_groups = [parts[2], parts[3]]
+          suffix_bytes = b''.join(base64.b64decode(group, validate=True) for group in suffix_groups)
+          report = [
+              'grouping=part00+part01 / part02 / part03',
+              f'damaged_group_chars={len(damaged_group)}',
+          ]
 
-          # Insert a harmless probe character immediately before final padding so
-          # the malformed stream can be decoded far enough to locate the first
-          # DEFLATE failure.
-          padding = len(first_group) - len(first_group.rstrip('='))
-          probe_pos = len(first_group) - padding
-          probe_text = first_group[:probe_pos] + 'A' + first_group[probe_pos:]
+          probe_text = damaged_group + 'A'
           probe_head = base64.b64decode(probe_text, validate=True)
-          probe_blob = probe_head + tail_bytes
-
+          probe_blob = probe_head + suffix_bytes
           inflater = zlib.decompressobj(16 + zlib.MAX_WBITS)
           fail_offset = None
           produced = 0
@@ -58,21 +55,17 @@ jobs:
                   break
           report.append(f'fail_offset={fail_offset}')
           report.append(f'produced_before_error={produced}')
-
-          if fail_offset is None:
-              approx = probe_pos
-          else:
-              approx = min(len(first_group), max(0, (fail_offset * 4) // 3))
+          approx = len(damaged_group) if fail_offset is None else min(len(damaged_group), max(0, (fail_offset * 4) // 3))
           report.append(f'approx_base64_position={approx}')
 
           alphabet = string.ascii_uppercase + string.ascii_lowercase + string.digits + '+/'
           candidate_positions = []
-          for pos in [len(parts[0]), len(parts[0]) + len(parts[1]), probe_pos]:
-              if 0 <= pos <= len(first_group) and pos not in candidate_positions:
+          for pos in [len(parts[0]), len(damaged_group)]:
+              if pos not in candidate_positions:
                   candidate_positions.append(pos)
-          for radius in (96, 384, 1536):
+          for radius in (128, 512, 2048, 8192):
               lo = max(0, approx - radius)
-              hi = min(len(first_group), approx + radius)
+              hi = min(len(damaged_group), approx + radius)
               for pos in range(lo, hi + 1):
                   if pos not in candidate_positions:
                       candidate_positions.append(pos)
@@ -82,15 +75,13 @@ jobs:
           for pos in candidate_positions:
               for char in alphabet:
                   tested += 1
-                  candidate_text = first_group[:pos] + char + first_group[pos:]
+                  candidate_text = damaged_group[:pos] + char + damaged_group[pos:]
                   try:
                       head_bytes = base64.b64decode(candidate_text, validate=True)
-                      html = gzip.decompress(head_bytes + tail_bytes)
+                      html = gzip.decompress(head_bytes + suffix_bytes)
                   except Exception:
                       continue
-                  if (b'<html' in html.lower()
-                          and b'function logisticsStats' in html
-                          and b'cartshed:Object.freeze' in html):
+                  if b'<html' in html.lower() and b'logisticsStats' in html and b'cartshed' in html:
                       result = (pos, char, html)
                       break
               if result:
@@ -100,12 +91,7 @@ jobs:
           if result:
               pos, char, html = result
               Path('index.html').write_bytes(html)
-              report.extend([
-                  'recovered=true',
-                  f'missing_position={pos}',
-                  f'missing_character={char}',
-                  f'html_bytes={len(html)}',
-              ])
+              report.extend(['recovered=true', f'missing_position={pos}', f'missing_character={char}', f'html_bytes={len(html)}'])
           else:
               report.append('recovered=false')
 
@@ -125,5 +111,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html .phase2-diagnostic.txt
-          git commit -m "locate phase 2 payload corruption"
+          git commit -m "test alternate phase 2 payload grouping"
           git push origin HEAD:agent/phase2-logistics
