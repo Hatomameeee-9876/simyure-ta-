@@ -19,55 +19,75 @@ jobs:
           ref: agent/phase2-logistics
           fetch-depth: 0
 
-      - name: Decode Phase 2 payload
+      - name: Diagnose and decode Phase 2 payload
         shell: bash
         run: |
-          set -euo pipefail
+          set -u
           python3 - <<'PY'
           from pathlib import Path
           import base64
           import gzip
+          import traceback
 
+          report = []
           files = sorted(Path('.crown-phase2').glob('part-*.b64'))
-          if not files:
-              raise SystemExit('No Phase 2 payload parts found')
+          report.append(f'files={len(files)}')
+          parts = []
+          for p in files:
+              text = ''.join(p.read_text(encoding='utf-8').split())
+              parts.append(text)
+              report.append(f'{p.name}: chars={len(text)} padding={text.count("=")} start={text[:16]} end={text[-16:]}')
 
-          parts = [''.join(p.read_text(encoding='utf-8').split()) for p in files]
           candidates = []
           try:
-              candidates.append(base64.b64decode(''.join(parts)))
-          except Exception:
-              pass
-          try:
-              candidates.append(b''.join(base64.b64decode(part) for part in parts))
-          except Exception:
-              pass
+              decoded = base64.b64decode(''.join(parts))
+              candidates.append(('joined-base64', decoded))
+              report.append(f'joined-base64 decoded={len(decoded)} bytes')
+          except Exception as e:
+              report.append(f'joined-base64 ERROR: {type(e).__name__}: {e}')
 
-          for candidate in candidates:
+          try:
+              chunks = []
+              for i, part in enumerate(parts):
+                  chunk = base64.b64decode(part)
+                  chunks.append(chunk)
+                  report.append(f'part-{i:02d} decoded={len(chunk)} bytes')
+              decoded = b''.join(chunks)
+              candidates.append(('per-part-base64', decoded))
+              report.append(f'per-part-base64 decoded={len(decoded)} bytes')
+          except Exception as e:
+              report.append(f'per-part-base64 ERROR: {type(e).__name__}: {e}')
+
+          assembled = False
+          for name, candidate in candidates:
+              report.append(f'{name} magic={candidate[:16].hex()}')
               try:
                   html = gzip.decompress(candidate)
-              except Exception:
-                  continue
-              if b'<html' in html.lower() and b'logisticsStats' in html and b'cartshed' in html:
-                  Path('index.html').write_bytes(html)
-                  print(f'Assembled {len(html)} bytes from {len(files)} parts')
-                  break
-          else:
-              raise SystemExit('Unable to decode a valid Phase 2 HTML payload')
+                  report.append(f'{name} gzip={len(html)} bytes html={b"<html" in html.lower()} logisticsStats={b"logisticsStats" in html} cartshed={b"cartshed" in html}')
+                  if b'<html' in html.lower() and not assembled:
+                      Path('index.html').write_bytes(html)
+                      report.append(f'WROTE index.html from {name}')
+                      assembled = True
+              except Exception as e:
+                  report.append(f'{name} GZIP ERROR: {type(e).__name__}: {e}')
+
+          Path('.phase2-diagnostic.txt').write_text('\n'.join(report) + '\n', encoding='utf-8')
+          print('\n'.join(report))
           PY
 
-          grep -q "function logisticsStats" index.html
-          grep -q "cartshed:Object.freeze" index.html
-          sed -n '/<script>/,/<\/script>/p' index.html | sed '1d;$d' > /tmp/crown-phase2.js
-          node --check /tmp/crown-phase2.js
+          if [ -f index.html ]; then
+            grep -q "function logisticsStats" index.html || echo "grep logisticsStats failed" >> .phase2-diagnostic.txt
+            grep -q "cartshed:Object.freeze" index.html || echo "grep cartshed failed" >> .phase2-diagnostic.txt
+            sed -n '/<script>/,/<\/script>/p' index.html | sed '1d;$d' > /tmp/crown-phase2.js
+            node --check /tmp/crown-phase2.js >> .phase2-diagnostic.txt 2>&1 || true
+          fi
 
-      - name: Commit assembled Phase 2
+      - name: Commit diagnostic result
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf .crown-phase2 .github/workflows/assemble-phase2-logistics.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "assemble phase 2 logistics game"
+          git add index.html .phase2-diagnostic.txt
+          git commit -m "diagnose phase 2 payload assembly"
           git push origin HEAD:agent/phase2-logistics
